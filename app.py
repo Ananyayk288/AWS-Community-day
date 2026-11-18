@@ -220,15 +220,20 @@ def generate():
     challenge_title = target_challenge.get("title", "")
     target_image_data = target_challenge.get("image_data")
 
-    # Generate Image for user prompt AS IT IS via Google Gemini exclusively
+    # Generate Image for user prompt AS IT IS via Cloudflare Workers AI (saurav-z/free-image-generation-api)
     gen_result = image_generator.generate(prompt, category=category, challenge_title=challenge_title)
 
     if not gen_result.get("success"):
-        status_code = 429 if gen_result.get("quota_exceeded") else 503
+        if gen_result.get("quota_exceeded"):
+            status_code = 429
+        elif gen_result.get("auth_failed"):
+            status_code = 401
+        else:
+            status_code = 503
         return jsonify({
             "success": False,
             "quota_exceeded": bool(gen_result.get("quota_exceeded")),
-            "error": gen_result.get("error", "Gemini image generation failed")
+            "error": gen_result.get("error", "Cloudflare Worker image generation failed")
         }), status_code
 
     user_image_data = gen_result.get("image_data")

@@ -9,10 +9,15 @@ from evaluation import ai_evaluator, validate_prompt_anti_cheat
 from image_generator import image_generator
 
 
-def _make_sample_jpeg_b64():
+def _make_sample_jpeg_bytes():
     buf = io.BytesIO()
     Image.new("RGB", (64, 64), color=(180, 40, 40)).save(buf, format="JPEG")
-    return base64.b64encode(buf.getvalue()).decode("utf-8")
+    return buf.getvalue()
+
+
+def _make_sample_jpeg_b64():
+    return base64.b64encode(_make_sample_jpeg_bytes()).decode("utf-8")
+
 
 class TestReversePromptBattle(unittest.TestCase):
     def setUp(self):
@@ -63,44 +68,56 @@ class TestReversePromptBattle(unittest.TestCase):
             self.assertNotIn(t["id"], reroll_seen, f"Reroll repetition detected: {t['id']}")
             reroll_seen.add(t["id"])
 
-    def test_gemini_only_generator(self):
-        # Ensure Nvidia and all non-Gemini engines have been completely removed
-        self.assertFalse(hasattr(image_generator, "_generate_nvidia"))
-        self.assertFalse(hasattr(image_generator, "_generate_bedrock"))
-        self.assertFalse(hasattr(image_generator, "_generate_pollinations"))
-        self.assertFalse(hasattr(image_generator, "_generate_procedural"))
+    def test_cloudflare_worker_generator_binary_and_json(self):
+        # Verify raw binary JPEG response from saurav-z/free-image-generation-api worker.js
+        sample_bytes = _make_sample_jpeg_bytes()
+        sample_b64 = base64.b64encode(sample_bytes).decode("utf-8")
 
-        sample_b64 = _make_sample_jpeg_b64()
-        mock_resp = MagicMock()
-        mock_resp.status_code = 200
-        mock_resp.json.return_value = {
-            "candidates": [{
-                "content": {
-                    "parts": [{
-                        "inlineData": {
-                            "mimeType": "image/jpeg",
-                            "data": sample_b64
-                        }
-                    }]
-                }
-            }]
-        }
+        mock_bin_resp = MagicMock()
+        mock_bin_resp.status_code = 200
+        mock_bin_resp.headers = {"Content-Type": "image/jpeg"}
+        mock_bin_resp.content = sample_bytes
 
         exact_prompt = "A bright red Ferrari parked inside a white showroom with dark shadows"
-        with patch("image_generator.requests.post", return_value=mock_resp) as mock_post, \
-             patch.object(image_generator, "_get_api_key", return_value="test-gemini-key-123456"):
+        worker_url = "https://my-img-worker.example.workers.dev"
+        worker_key = "super-secret-worker-key"
+
+        with patch("image_generator.requests.post", return_value=mock_bin_resp) as mock_post, \
+             patch.object(image_generator, "_get_worker_config", return_value=(worker_url, worker_key)):
             res = image_generator.generate(exact_prompt)
 
         self.assertTrue(res["success"])
-        self.assertTrue(res["source"].startswith("gemini-"))
+        self.assertEqual(res["source"], "cloudflare-workers-ai")
         self.assertEqual(res["image_data"], f"data:image/jpeg;base64,{sample_b64}")
 
-        # Rule 4: Verify exact unmodified prompt and responseModalities sent to Gemini
-        called_url = mock_post.call_args[0][0]
-        called_payload = mock_post.call_args[1]["json"]
-        self.assertIn("generativelanguage.googleapis.com", called_url)
-        self.assertEqual(called_payload["contents"][0]["parts"][0]["text"], exact_prompt)
-        self.assertEqual(called_payload["generationConfig"]["responseModalities"], ["IMAGE", "TEXT"])
+        # Rule 4: Verify exact unmodified prompt & Bearer auth sent to Cloudflare Worker
+        self.assertEqual(mock_post.call_args[0][0], worker_url)
+        self.assertEqual(mock_post.call_args[1]["headers"]["Authorization"], f"Bearer {worker_key}")
+        self.assertEqual(mock_post.call_args[1]["json"], {"prompt": exact_prompt})
+
+        # Verify JSON base64 response support (e.g. FLUX on Cloudflare Workers AI)
+        mock_json_resp = MagicMock()
+        mock_json_resp.status_code = 200
+        mock_json_resp.headers = {"Content-Type": "application/json"}
+        mock_json_resp.content = b'{"image":"..."}'
+        mock_json_resp.json.return_value = {
+            "image": sample_b64,
+            "model": "@cf/black-forest-labs/flux-1-schnell"
+        }
+
+        with patch("image_generator.requests.post", return_value=mock_json_resp), \
+             patch.object(image_generator, "_get_worker_config", return_value=(worker_url, worker_key)):
+            res_flux = image_generator.generate(exact_prompt)
+
+        self.assertTrue(res_flux["success"])
+        self.assertEqual(res_flux["source"], "cloudflare-flux")
+        self.assertEqual(res_flux["image_data"], f"data:image/jpeg;base64,{sample_b64}")
+
+        # Verify clean error when CF_WORKER_URL / CF_WORKER_API_KEY are missing
+        with patch.object(image_generator, "_get_worker_config", return_value=("", "")):
+            res_missing = image_generator.generate(exact_prompt)
+        self.assertFalse(res_missing["success"])
+        self.assertIn("CF_WORKER_URL", res_missing["error"])
 
     def test_end_to_end_reverse_prompt_workflow(self):
         # 1. User joins on Identifier page with Name & Email
@@ -131,21 +148,16 @@ class TestReversePromptBattle(unittest.TestCase):
         cheat_data = cheat_resp.get_json()
         self.assertTrue(cheat_data.get('is_cheating'))
 
-        # 3. Test Valid Gemini Generation & Dual-Image AI Evaluation
+        # 3. Test Valid Cloudflare Worker Generation & Dual-Image AI Evaluation
         valid_prompt = "A glowing futuristic research dome surrounded by crystalline spires and volumetric golden mist, 8k"
-        sample_b64 = _make_sample_jpeg_b64()
-        mock_gemini_img_resp = MagicMock()
-        mock_gemini_img_resp.status_code = 200
-        mock_gemini_img_resp.json.return_value = {
-            "candidates": [{
-                "content": {
-                    "parts": [{"inlineData": {"mimeType": "image/jpeg", "data": sample_b64}}]
-                }
-            }]
-        }
+        sample_bytes = _make_sample_jpeg_bytes()
+        mock_worker_resp = MagicMock()
+        mock_worker_resp.status_code = 200
+        mock_worker_resp.headers = {"Content-Type": "image/jpeg"}
+        mock_worker_resp.content = sample_bytes
 
-        with patch("image_generator.requests.post", return_value=mock_gemini_img_resp), \
-             patch.object(image_generator, "_get_api_key", return_value="test-gemini-key-123456"):
+        with patch("image_generator.requests.post", return_value=mock_worker_resp), \
+             patch.object(image_generator, "_get_worker_config", return_value=("https://demo.workers.dev", "secret-key")):
             gen_resp = self.client.post('/api/generate', json={
                 'participant_id': pid,
                 'challenge_id': target_challenge['id'],
@@ -155,7 +167,7 @@ class TestReversePromptBattle(unittest.TestCase):
         gen_data = gen_resp.get_json()
         self.assertTrue(gen_data['success'])
         gen_rec = gen_data['generation']
-        self.assertTrue(gen_rec.get('source', '').startswith('gemini-'))
+        self.assertEqual(gen_rec.get('source'), 'cloudflare-workers-ai')
         self.assertIsNotNone(gen_rec.get('image_data'))
 
         # Check AI Judge Dual-Image Scorecard
@@ -197,6 +209,7 @@ class TestReversePromptBattle(unittest.TestCase):
         auth_resp = self.client.post('/api/admin/auth', json={'admin_code': ADMIN_CODE})
         self.assertEqual(auth_resp.status_code, 200)
         self.assertTrue(auth_resp.get_json()['success'])
+
 
 if __name__ == '__main__':
     unittest.main()

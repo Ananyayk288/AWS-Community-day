@@ -684,7 +684,7 @@ document.addEventListener("DOMContentLoaded", () => {
         // Tags
         const sourceTag = document.getElementById("canvas-source-tag");
         if (sourceTag) {
-          sourceTag.textContent = `Engine: ${(gen.source || 'GEMINI').toUpperCase()}`;
+          sourceTag.textContent = `Engine: ${(gen.source || 'CLOUDFLARE-AI').toUpperCase()}`;
           sourceTag.classList.remove("hidden");
         }
 
@@ -705,7 +705,7 @@ document.addEventListener("DOMContentLoaded", () => {
         showToast(`Visual synthesized! AI Judge Match Score: ${gen.evaluation?.total_score || 0}/100`, "success");
       } else {
         playAudioTone("error");
-        const errMsg = data.error || "Gemini image generation failed. Please check your GEMINI_API_KEY configuration.";
+        const errMsg = data.error || "Image generation failed. Please check CF_WORKER_URL and CF_WORKER_API_KEY in .env.";
         showPromptError(errMsg);
         showToast(errMsg, "error");
       }
