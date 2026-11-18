@@ -2,12 +2,6 @@
  * PROMPT QUEST — AWS Gaming & AI Prompt Engineering Challenge Client Engine
  * Matches the "Prompt Quest AWS Gaming Dashboard" Reference Design
  * Preserves 100% of Backend APIs, Evaluation, Image Synthesis & Leaderboard Logic
- * BUILD THE FUTURE - AI Prompt Battle Client Engine
- * Reverse-Engineering Challenge:
- * 1. Agent generates unique Target Image
- * 2. User inspects Target Image on screen and types descriptive prompt (no copy-paste, no meta-prompts)
- * 3. System generates image from prompt as it is
- * 4. Unbiased AI Judge compares BOTH images and scores visual similarity
  */
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -20,10 +14,6 @@ document.addEventListener("DOMContentLoaded", () => {
     currentEvaluation: null,
     generations: [],
     isComparing: false,
-    targetImage: null,
-    currentImage: null,
-    currentEvaluation: null,
-    generations: [],
     hasGenerated: false,
     isGenerating: false,
     isSubmitted: false,
@@ -34,7 +24,7 @@ document.addEventListener("DOMContentLoaded", () => {
     isAdmin: false,
     adminToken: null,
     compState: null,
-    timeRemaining: 300
+    timeRemaining: 180
   };
 
   // ---------------------------------------------------------------------------
@@ -140,6 +130,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const screens = {
     identifier: document.getElementById("identifier-screen"),
     game: document.getElementById("game-screen"),
+    results: document.getElementById("results-screen"),
     leaderboard: document.getElementById("leaderboard-screen"),
     achievements: document.getElementById("achievements-screen"),
     profile: document.getElementById("profile-screen")
@@ -157,6 +148,16 @@ document.addEventListener("DOMContentLoaded", () => {
     Object.values(screens).forEach(s => s && s.classList.remove("active"));
     if (screens[name]) {
       screens[name].classList.add("active");
+    }
+
+    // Hide Leaderboard button on Login screen; show it only after login
+    const topLbBtn = document.getElementById("nav-leaderboard-btn");
+    if (topLbBtn) {
+      if (name === "identifier" || !state.participant) {
+        topLbBtn.classList.add("hidden");
+      } else {
+        topLbBtn.classList.remove("hidden");
+      }
     }
 
     document.querySelectorAll(".nav-route-btn").forEach(btn => {
@@ -308,7 +309,6 @@ document.addEventListener("DOMContentLoaded", () => {
     if (questEl) {
       questEl.textContent = state.currentChallenge ? state.currentChallenge.title : "Unassigned";
     }
-    console.warn("[Socket.IO] Real-time socket not available; standard REST mode active:", err);
   }
 
   // Subtle Web Audio Feedback
@@ -341,18 +341,8 @@ document.addEventListener("DOMContentLoaded", () => {
         gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
         osc.start(now);
         osc.stop(now + 0.2);
-      } else if (type === "error") {
-        osc.frequency.setValueAtTime(260, now);
-        osc.frequency.exponentialRampToValueAtTime(180, now + 0.15);
-        gain.gain.setValueAtTime(0.09, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
-        osc.start(now);
-        osc.stop(now + 0.15);
       }
     } catch (e) { }
-    } catch (e) {
-      // Audio autoplay policy
-    }
   }
 
   // Toast Notifications
@@ -366,7 +356,7 @@ document.addEventListener("DOMContentLoaded", () => {
     setTimeout(() => {
       toast.style.opacity = "0";
       setTimeout(() => toast.remove(), 300);
-    }, 4000);
+    }, 3800);
   }
 
   // ---------------------------------------------------------------------------
@@ -419,8 +409,13 @@ document.addEventListener("DOMContentLoaded", () => {
   if (backToGameBtn) {
     backToGameBtn.addEventListener("click", () => {
       playAudioTone("click");
-      if (state.participant) showScreen("game");
-      else showScreen("identifier");
+      if (state.participant && state.hasGenerated && state.currentImage) {
+        showScreen("results");
+      } else if (state.participant) {
+        showScreen("game");
+      } else {
+        showScreen("identifier");
+      }
     });
   }
 
@@ -432,37 +427,35 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Switch User / Logout button
-  const changeUserBtn = document.getElementById("change-user-btn");
-  if (changeUserBtn) {
-    changeUserBtn.addEventListener("click", () => {
-      playAudioTone("click");
-      try {
-        localStorage.removeItem("sbg_builder_name");
-        localStorage.removeItem("sbg_builder_email");
-        localStorage.removeItem("sbg_participant_id");
-      } catch (e) { }
+  // Switch User / Next Participant handler
+  function handleSignOutAndReset() {
+    playAudioTone("click");
+    try {
+      localStorage.removeItem("sbg_builder_name");
+      localStorage.removeItem("sbg_builder_email");
+      localStorage.removeItem("sbg_participant_id");
+    } catch (e) { }
 
-      stopChallengeTimer();
-      state.participant = null;
-      state.currentChallenge = null;
-      state.targetImage = null;
-      state.currentImage = null;
-      state.currentEvaluation = null;
-      state.generations = [];
+    stopChallengeTimer();
+    state.participant = null;
+    state.currentChallenge = null;
+    state.currentReferenceUri = null;
+    state.generations = [];
+    unlockWorkspaceForNewSession();
 
-      const userPill = document.getElementById("top-nav-user-pill");
-      if (userPill) userPill.classList.add("hidden");
-      if (defaultAvatarTrigger) defaultAvatarTrigger.classList.remove("hidden");
-      unlockWorkspaceForNewSession();
+    const userPill = document.getElementById("top-nav-user-pill");
+    if (userPill) userPill.classList.add("hidden");
+    if (defaultAvatarTrigger) defaultAvatarTrigger.classList.remove("hidden");
 
-      const userPill = document.getElementById("top-nav-user-pill");
-      if (userPill) userPill.classList.add("hidden");
-
-      showScreen("identifier");
-      showToast("Signed out. Enter your builder alias to start a new session.", "info");
-    });
+    showScreen("identifier");
+    showToast("Ready for next participant. Enter name & email to begin.", "info");
   }
+
+  const changeUserBtn = document.getElementById("change-user-btn");
+  if (changeUserBtn) changeUserBtn.addEventListener("click", handleSignOutAndReset);
+
+  const resultsNextPlayerBtn = document.getElementById("results-next-player-btn");
+  if (resultsNextPlayerBtn) resultsNextPlayerBtn.addEventListener("click", handleSignOutAndReset);
 
   // ---------------------------------------------------------------------------
   // 1. IDENTIFIER REGISTRATION (Name + Email)
@@ -530,10 +523,6 @@ document.addEventListener("DOMContentLoaded", () => {
     if (startBtn) {
       startBtn.disabled = true;
       startBtn.innerHTML = `<span class="awsui-spinner-inline"></span><span>Entering Prompt Quest Arena...</span>`;
-      startBtn.innerHTML = `
-        <span class="awsui-spinner-inline"></span>
-        <span>Registering &amp; Agent Synthesizing Target...</span>
-      `;
     }
 
     try {
@@ -549,10 +538,8 @@ document.addEventListener("DOMContentLoaded", () => {
         unlockWorkspaceForNewSession();
         state.participant = data.participant;
         state.timerDuration = Number(data.timer_duration) || 180;
-
         const target = data.target_challenge || data.challenge;
         state.currentChallenge = target;
-        state.targetImage = target ? target.image_data : null;
 
         try {
           localStorage.setItem("sbg_builder_name", name);
@@ -567,15 +554,9 @@ document.addEventListener("DOMContentLoaded", () => {
         if (gName) gName.textContent = name;
         if (gEmail) gEmail.textContent = `(${email})`;
 
-        renderAssignedChallenge(data.challenge);
+        renderAssignedChallenge(target);
         refreshCompetitionState();
 
-        showScreen("game");
-        showToast(`Welcome, ${name}! Assigned Quest: "${data.challenge.title}"`, "success");
-        // Populate Assigned Unique Target Challenge & Image
-        renderTargetChallenge(target);
-
-        // Transition to Main Game Screen & start the 180-second single-shot countdown
         showScreen("game");
         startChallengeTimer(state.timerDuration);
         showToast(`Welcome, ${name}! You have ${state.timerDuration}s and 1 final generation attempt.`, "success");
@@ -694,26 +675,8 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function renderAssignedChallenge(ch) {
-      if (savedName && identifierNameInput) {
-        identifierNameInput.value = savedName;
-      }
-      if (savedEmail && identifierEmailInput) {
-        identifierEmailInput.value = savedEmail;
-      }
-    } catch (e) {}
-  }
-
-  // ---------------------------------------------------------------------------
-  // 2. MAIN GAME: TARGET CHALLENGE RENDERING
-  // ---------------------------------------------------------------------------
-  const targetImg = document.getElementById("target-reference-image");
-  const targetOverlay = document.getElementById("target-loading-overlay");
-  const viewTargetBtn = document.getElementById("view-target-image-btn");
-
-  function renderTargetChallenge(ch) {
     if (!ch) return;
     state.currentChallenge = ch;
-    state.targetImage = ch.image_data;
 
     const catNameEl = document.getElementById("player-cat-name");
     const titleEl = document.getElementById("player-challenge-title");
@@ -721,25 +684,15 @@ document.addEventListener("DOMContentLoaded", () => {
     const refImg = document.getElementById("challenge-reference-img");
     const compareRefImg = document.getElementById("compare-ref-img");
 
-    if (catNameEl) catNameEl.textContent = ch.category || "Innovation";
-    if (titleEl) titleEl.textContent = ch.title || "Visual Target";
+    if (catNameEl) catNameEl.textContent = ch.category || "Visual Challenge";
+    if (titleEl) titleEl.textContent = ch.title || "Target Reference Scene";
 
-    // Set Target Reference Image
-    if (targetImg && ch.image_data) {
-      targetImg.src = ch.image_data;
-      targetImg.classList.remove("hidden");
-    }
-
-    if (viewTargetBtn) {
-      viewTargetBtn.disabled = !ch.image_data;
-    }
-
-    const refUri = buildChallengeReferenceDataURI(ch);
+    // Display the real unique Target Reference Photo (fallback to SVG only if unavailable)
+    const refUri = ch.image_data || buildChallengeReferenceDataURI(ch);
     state.currentReferenceUri = refUri;
     if (refImg) refImg.src = refUri;
     if (compareRefImg) compareRefImg.src = refUri;
 
-    // Inspiration Concepts / Scene Elements
     if (kwContainer) {
       kwContainer.innerHTML = "";
       (ch.inspiration_keywords || []).forEach(kw => {
@@ -747,7 +700,9 @@ document.addEventListener("DOMContentLoaded", () => {
         chip.type = "button";
         chip.className = "keyword-chip";
         chip.textContent = `+ ${kw}`;
+        chip.disabled = state.hasGenerated || state.isGenerating;
         chip.addEventListener("click", () => {
+          if (state.hasGenerated || state.isGenerating) return;
           playAudioTone("click");
           appendModifier(kw);
         });
@@ -763,14 +718,13 @@ document.addEventListener("DOMContentLoaded", () => {
         playAudioTone("click");
         openImageModal(
           state.currentReferenceUri,
-          `Target Reference: ${state.currentChallenge.title} — Visual Goals: ${state.currentChallenge.visual_goals || ""}`
+          `Target Reference: ${state.currentChallenge.title} (${state.currentChallenge.category || ""})`
         );
       }
     });
   }
 
-  // Re-roll Challenge
-  // Re-roll / Synthesize New Target Challenge (only before finalization)
+  // Re-roll Challenge (only allowed before finalizing single-shot generation)
   const rerollBtn = document.getElementById("reroll-challenge-btn");
   if (rerollBtn) {
     rerollBtn.addEventListener("click", async () => {
@@ -784,8 +738,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
       playAudioTone("click");
       rerollBtn.disabled = true;
-      rerollBtn.textContent = "🔄 Synthesizing...";
-      if (targetOverlay) targetOverlay.classList.remove("hidden");
+      rerollBtn.textContent = "🔄 Rolling...";
 
       try {
         const resp = await fetch("/api/target-challenge/new", {
@@ -794,59 +747,32 @@ document.addEventListener("DOMContentLoaded", () => {
           body: JSON.stringify({ participant_id: state.participant.id })
         });
         const data = await resp.json();
-        if (data.success && data.challenge) {
-          renderAssignedChallenge(data.challenge);
-          showToast(`New Quest Assigned: "${data.challenge.title}"`, "info");
         const newTarget = data.target_challenge || data.challenge;
         if (data.success && newTarget) {
-          renderTargetChallenge(newTarget);
+          renderAssignedChallenge(newTarget);
           resetUserGuessState();
           startChallengeTimer(Number(data.timer_duration) || state.timerDuration || 180);
-          showToast(`New Target Assigned: "${newTarget.title}" (180s timer reset)`, "info");
+          showToast(`New Quest Assigned: "${newTarget.title}" (180s timer reset)`, "info");
         } else {
-          showToast(data.error || "Could not synthesize new target challenge.", "error");
+          showToast(data.error || "Could not re-roll challenge.", "error");
         }
       } catch (e) {
-        showToast("Network error creating target challenge.", "error");
+        showToast("Network error re-rolling challenge.", "error");
       } finally {
-        rerollBtn.disabled = false;
-        rerollBtn.textContent = "🔄 Re-roll Quest";
         if (!state.hasGenerated) {
           rerollBtn.disabled = false;
         }
-        rerollBtn.textContent = "🔄 New Target Image";
-        if (targetOverlay) targetOverlay.classList.add("hidden");
+        rerollBtn.textContent = "🔄 Re-roll Quest";
       }
     });
   }
 
-  function resetUserGuessState() {
-    state.currentImage = null;
-    state.currentEvaluation = null;
-    if (activeImg) {
-      activeImg.classList.add("hidden");
-      activeImg.src = "";
-    }
-    if (placeholder) placeholder.classList.remove("hidden");
-    if (viewFullBtn) viewFullBtn.disabled = true;
-    if (submitBtn) {
-      submitBtn.disabled = true;
-      submitBtn.innerHTML = `<span>🏆 Score Auto-Saves on Finalize</span>`;
-    }
-    const evalCard = document.getElementById("ai-eval-preview-card");
-    if (evalCard) evalCard.classList.add("hidden");
-  }
-
   // ---------------------------------------------------------------------------
-  // 3. PROMPT CONSOLE
-  // ---------------------------------------------------------------------------
-  const promptInput = document.getElementById("prompt-input");
-  const charCounter = document.getElementById("char-counter");
-  const qualityPill = document.getElementById("prompt-quality-indicator");
   // 3. PROMPT CONSOLE & ANTI-CHEAT ENFORCEMENT
   // ---------------------------------------------------------------------------
   const promptInput = document.getElementById("prompt-input");
   const charCounter = document.getElementById("char-counter");
+  const qualityPill = document.getElementById("prompt-quality-indicator");
   const promptError = document.getElementById("prompt-error-msg");
 
   function showPromptError(msg) {
@@ -883,6 +809,8 @@ document.addEventListener("DOMContentLoaded", () => {
         qualityPill.classList.add("quality-strong");
       }
     }
+  }
+
   // Client-side Anti-Cheat Patterns (Rule 5: No meta-prompts like "generate an image like the one on screen")
   const CHEAT_PATTERNS = [
     /generate (an?|the)? image like/i,
@@ -933,7 +861,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (pat.test(trimmed)) {
         return {
           isValid: false,
-          msg: "🚫 Cheat phrase detected! You cannot ask the AI to copy 'the image on screen'. You must observe the reference image and describe what you see (subjects, colors, environment, lighting, etc.)."
+          msg: "🚫 Cheat phrase detected! You cannot ask the AI to copy 'the image on screen'. Observe the reference scene and describe what you see."
         };
       }
     }
@@ -950,22 +878,17 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     if (BLOCK_PASTE) {
-      // RULE 1: Block copy-pasting prompts
       promptInput.addEventListener("paste", (e) => {
         e.preventDefault();
         playAudioTone("error");
-        showToast("🚫 Copy-pasting prompts is disabled for fair competition! You must type your visual description.", "error");
+        showToast("🚫 Copy-pasting prompts is disabled for fair competition! Type your description manually.", "error");
         showPromptError("Copy-pasting is strictly disabled for fair play! Please type your prompt manually.");
       });
-
-      // Block drag and drop text
       promptInput.addEventListener("drop", (e) => {
         e.preventDefault();
         playAudioTone("error");
         showToast("🚫 Drag and drop is disabled! Please type your prompt manually.", "error");
       });
-
-      // Intercept keyboard paste shortcuts: Ctrl+V, Cmd+V, Shift+Insert
       promptInput.addEventListener("keydown", (e) => {
         if (((e.ctrlKey || e.metaKey) && (e.key === "v" || e.key === "V")) || (e.shiftKey && e.key === "Insert")) {
           e.preventDefault();
@@ -974,15 +897,11 @@ document.addEventListener("DOMContentLoaded", () => {
           showPromptError("Keyboard paste shortcut is disabled. Please type your prompt manually.");
         }
       });
-
-      // Disable right-click context menu on textarea to prevent right-click Paste
       promptInput.addEventListener("contextmenu", (e) => {
         e.preventDefault();
       });
     }
   }
-
-  if (promptInput) promptInput.addEventListener("input", updateCharCount);
 
   function appendModifier(modifier) {
     if (!promptInput || state.hasGenerated || state.isGenerating) return;
@@ -1024,13 +943,32 @@ document.addEventListener("DOMContentLoaded", () => {
   // ---------------------------------------------------------------------------
   const generateBtn = document.getElementById("generate-image-btn");
   const submitBtn = document.getElementById("submit-masterpiece-btn");
-  const overlay = document.getElementById("generating-overlay");
+  const overlay = document.getElementById("results-loading-overlay") || document.getElementById("generating-overlay");
   const activeImg = document.getElementById("active-generated-image");
+  const resultTargetImg = document.getElementById("result-target-image");
+  const resultTargetTitle = document.getElementById("result-target-title");
+  const resultSubmittedPrompt = document.getElementById("result-submitted-prompt");
+  const resultZoomTargetBtn = document.getElementById("result-zoom-target-btn");
   const placeholder = document.getElementById("canvas-placeholder");
   const viewFullBtn = document.getElementById("view-full-image-btn");
   const toggleCompareBtn = document.getElementById("toggle-compare-btn");
   const comparisonSplitView = document.getElementById("comparison-split-view");
   const compareGenImg = document.getElementById("compare-gen-img");
+  const timerPill = document.getElementById("countdown-timer-pill");
+  const timerLabelEl = document.getElementById("countdown-timer-label");
+  const timerDisplayEl = document.getElementById("countdown-timer-display");
+
+  if (resultZoomTargetBtn) {
+    resultZoomTargetBtn.addEventListener("click", () => {
+      if (state.currentReferenceUri && state.currentChallenge) {
+        playAudioTone("click");
+        openImageModal(
+          state.currentReferenceUri,
+          `Target Reference: ${state.currentChallenge.title} (${state.currentChallenge.category || ""})`
+        );
+      }
+    });
+  }
 
   function setComparisonMode(enabled) {
     state.isComparing = enabled;
@@ -1052,9 +990,26 @@ document.addEventListener("DOMContentLoaded", () => {
       setComparisonMode(!state.isComparing);
     });
   }
-  const timerPill = document.getElementById("countdown-timer-pill");
-  const timerLabelEl = document.getElementById("countdown-timer-label");
-  const timerDisplayEl = document.getElementById("countdown-timer-display");
+
+  function resetUserGuessState() {
+    state.currentImage = null;
+    state.currentEvaluation = null;
+    setComparisonMode(false);
+    if (activeImg) {
+      activeImg.classList.add("hidden");
+      activeImg.src = "";
+    }
+    if (compareGenImg) compareGenImg.src = "";
+    if (placeholder) placeholder.classList.remove("hidden");
+    if (viewFullBtn) viewFullBtn.disabled = true;
+    if (toggleCompareBtn) toggleCompareBtn.classList.add("hidden");
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = `<span>🏆 Score Auto-Saves on Finalize</span>`;
+    }
+    const evalCard = document.getElementById("ai-eval-preview-card");
+    if (evalCard) evalCard.classList.add("hidden");
+  }
 
   function formatClock(totalSec) {
     const clamped = Math.max(0, Math.ceil(totalSec));
@@ -1170,7 +1125,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (countBadge) countBadge.textContent = "0 / 1";
     const reel = document.getElementById("history-reel-container");
     if (reel) {
-      reel.innerHTML = `<p class="history-empty" id="single-shot-status-text">1 chance remaining — prompt will auto-generate when the 180s timer reaches 00:00.</p>`;
+      reel.innerHTML = `<p class="history-empty" id="single-shot-status-text">1 chance remaining — prompt auto-generates when the 180s timer reaches 00:00.</p>`;
     }
     setTimerBadge("AUTO-GENERATE IN", formatClock(state.timerDuration || 180), "");
   }
@@ -1185,9 +1140,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const prompt = promptInput ? promptInput.value.trim() : "";
 
     if (!prompt) {
-      showToast("Please enter a prompt for your assigned quest.", "error");
       if (autoTriggered) {
-        // Timer ran out with empty prompt: lock attempt on both client and server
         lockWorkspaceAfterFinalize("⏱️ Time Expired (No Prompt)", "TIME EXPIRED", "00:00");
         playAudioTone("error");
         const msg = "⏱️ 180 seconds elapsed with no prompt entered. Your single attempt has expired.";
@@ -1215,7 +1168,7 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    // Client-side anti-cheat check (allow fixing if manual click before time expires)
+    // Client-side anti-cheat check (allow editing if clicked manually before deadline)
     const antiCheat = validateClientAntiCheat(prompt);
     if (!antiCheat.isValid && !autoTriggered) {
       playAudioTone("error");
@@ -1229,15 +1182,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (!state.currentChallenge) {
       showToast("No quest assigned. Please register on Home first.", "error");
-      showToast("No target challenge assigned. Please identify first.", "error");
       return;
     }
 
-    // Lock inputs & stop timer while finalizing
+    // Stop timer & lock inputs while finalizing
     stopChallengeTimer();
     state.isGenerating = true;
     setPromptControlsDisabled(true);
-    setTimerBadge(autoTriggered ? "TIME UP — GENERATING" : "FINALIZING", autoTriggered ? "00:00" : formatClock(state.timerRemaining), "timer-warning");
+    setTimerBadge(
+      autoTriggered ? "TIME UP — GENERATING" : "FINALIZING",
+      autoTriggered ? "00:00" : formatClock(state.timerRemaining),
+      "timer-warning"
+    );
 
     if (autoTriggered) {
       showToast("⏱️ 180s timer finished! Auto-generating your final image now...", "info");
@@ -1252,7 +1208,34 @@ document.addEventListener("DOMContentLoaded", () => {
         <span>${autoTriggered ? "Time Up — Auto-Generating & Judging..." : "Finalizing, Generating & Judging..."}</span>
       `;
     }
+    // Prepare Screen 3 (Photo Comparison & Results) and shift there immediately
+    if (resultTargetImg && state.currentReferenceUri) {
+      resultTargetImg.src = state.currentReferenceUri;
+    }
+    if (resultTargetTitle && state.currentChallenge) {
+      resultTargetTitle.textContent = state.currentChallenge.title || "Target Scene";
+    }
+    if (resultSubmittedPrompt) {
+      resultSubmittedPrompt.textContent = `"${prompt}"`;
+    }
+    if (activeImg) {
+      activeImg.classList.add("hidden");
+      activeImg.src = "";
+    }
+    const evalCardBefore = document.getElementById("ai-eval-preview-card");
+    if (evalCardBefore) evalCardBefore.classList.add("hidden");
+    if (viewFullBtn) viewFullBtn.disabled = true;
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = `<span>🏆 View Leaderboard</span>`;
+    }
+    const srcTagBefore = document.getElementById("canvas-source-tag");
+    const latTagBefore = document.getElementById("canvas-latency-tag");
+    if (srcTagBefore) srcTagBefore.classList.add("hidden");
+    if (latTagBefore) latTagBefore.classList.add("hidden");
+
     if (overlay) overlay.classList.remove("hidden");
+    showScreen("results");
 
     let finalizedSuccessfully = false;
     let permanentlyLocked = false;
@@ -1278,6 +1261,7 @@ document.addEventListener("DOMContentLoaded", () => {
           permanentlyLocked = true;
           lockWorkspaceAfterFinalize("🚫 Attempt Disqualified", "DISQUALIFIED", "00:00");
         }
+        showScreen("game");
         return;
       }
 
@@ -1287,6 +1271,7 @@ document.addEventListener("DOMContentLoaded", () => {
         showPromptError(data.error || "You have already used your single generation attempt.");
         showToast(data.error || "Only 1 generation attempt is allowed.", "error");
         lockWorkspaceAfterFinalize("✅ Final Image Already Generated", "FINALIZED", "LOCKED");
+        showScreen("game");
         return;
       }
 
@@ -1301,8 +1286,6 @@ document.addEventListener("DOMContentLoaded", () => {
         state.generations = [gen];
         state.isSubmitted = Boolean(data.submission);
 
-        setComparisonMode(false);
-        // Display user generated image
         if (activeImg) {
           activeImg.src = gen.image_data;
           activeImg.classList.remove("hidden");
@@ -1314,8 +1297,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const sourceTag = document.getElementById("canvas-source-tag");
         if (sourceTag) {
-          sourceTag.textContent = `Engine: ${(gen.source || "AI").toUpperCase()}`;
-          sourceTag.textContent = `Engine: ${(gen.source || 'CLOUDFLARE-AI').toUpperCase()}`;
+          sourceTag.textContent = `Engine: ${(gen.source || "CLOUDFLARE-AI").toUpperCase()}`;
           sourceTag.classList.remove("hidden");
         }
 
@@ -1326,19 +1308,12 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         renderEvaluationScorecard(gen.evaluation);
-        // Render AI Evaluation Scorecard (Dual-Image Comparison)
-        renderEvaluationScorecard(gen.evaluation);
-
-        // Update single-shot status thumbnail
         renderHistoryReel();
         updateDashboardProgressRing(gen.evaluation?.total_score, gen.evaluation?.tier_badge);
+        refreshCompetitionState();
 
-        if (submitBtn) submitBtn.disabled = false;
-        showToast("Visual synthesized & evaluated by AI Judge!", "success");
-        // Lock workspace permanently for this participant (single-shot complete)
         lockWorkspaceAfterFinalize("✅ Final Image Generated (1/1 Used)", "FINALIZED", "1 / 1");
 
-        // Enable Leaderboard button (score already auto-saved)
         if (submitBtn) {
           submitBtn.disabled = false;
           submitBtn.innerHTML = state.isSubmitted
@@ -1346,6 +1321,7 @@ document.addEventListener("DOMContentLoaded", () => {
             : `<span>🏆 Lock In &amp; Save Score</span>`;
         }
 
+        showScreen("results");
         const prefix = autoTriggered ? "⏱️ Auto-generated at 00:00! " : "Final image generated & score saved! ";
         showToast(`${prefix}AI Judge Match Score: ${gen.evaluation?.total_score || 0}/100`, "success");
       } else {
@@ -1353,15 +1329,16 @@ document.addEventListener("DOMContentLoaded", () => {
         const errMsg = data.error || "Image generation failed. Please check CF_WORKER_URL and CF_WORKER_API_KEY in .env.";
         showPromptError(errMsg);
         showToast(errMsg, "error");
+        showScreen("game");
       }
     } catch (err) {
       console.error(err);
       showToast("Network error generating visual. You can retry finalizing.", "error");
+      showScreen("game");
     } finally {
       state.isGenerating = false;
       if (overlay) overlay.classList.add("hidden");
       if (!finalizedSuccessfully && !permanentlyLocked) {
-        // Restore controls on transient failure or manual cheat rejection so user isn't stuck
         setPromptControlsDisabled(false);
         if (generateBtn) {
           generateBtn.disabled = false;
@@ -1379,7 +1356,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if (generateBtn) generateBtn.addEventListener("click", () => handleGenerate({ autoTriggered: false }));
 
   // ---------------------------------------------------------------------------
-  // 5. RENDER UNBIASED AI EVALUATION SCORECARD
+  // 5. RENDER UNBIASED DUAL-IMAGE AI EVALUATION SCORECARD
   // ---------------------------------------------------------------------------
   function renderEvaluationScorecard(ev) {
     if (!ev) return;
@@ -1388,7 +1365,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const chName = document.getElementById("eval-challenge-name");
     if (chName && state.currentChallenge) {
-      chName.textContent = `${state.currentChallenge.title} (${state.currentChallenge.category})`;
       chName.textContent = `Visual Comparison: "${state.currentChallenge.title}" (${state.currentChallenge.category})`;
     }
 
@@ -1401,12 +1377,11 @@ document.addEventListener("DOMContentLoaded", () => {
       if (ev.tier_color) tierPill.style.backgroundColor = ev.tier_color;
     }
 
-    // 4 Objective Pillars
     const b = ev.breakdown || {};
-    const sRel = b.visual_similarity?.score ?? 0;
-    const sCre = b.subject_match?.score ?? 0;
-    const sTec = b.style_match?.score ?? 0;
-    const sImp = b.prompt_precision?.score ?? 0;
+    const sRel = b.visual_similarity?.score ?? b.thematic_relevance?.score ?? 0;
+    const sCre = b.subject_match?.score ?? b.creativity_originality?.score ?? 0;
+    const sTec = b.style_match?.score ?? b.prompt_engineering?.score ?? 0;
+    const sImp = b.prompt_precision?.score ?? b.future_impact?.score ?? 0;
 
     const elRel = document.getElementById("score-rel");
     const barRel = document.getElementById("bar-rel");
@@ -1436,29 +1411,23 @@ document.addEventListener("DOMContentLoaded", () => {
     if (barImp) barImp.style.width = `${(sImp / 25) * 100}%`;
     if (commImp) commImp.textContent = b.prompt_precision?.comment || "";
 
-    // Grounded Observations Audit
     const targetObsEl = document.getElementById("target-obs-text");
     if (targetObsEl) {
-      if (Array.isArray(ev.target_observations)) {
-        targetObsEl.textContent = ev.target_observations.map(x => `• ${x}`).join("\n");
-      } else {
-        targetObsEl.textContent = ev.target_observations || "Analyzed reference scene elements.";
-      }
-    }
-    const userObsEl = document.getElementById("user-obs-text");
-    if (userObsEl) {
-      if (Array.isArray(ev.user_observations)) {
-        userObsEl.textContent = ev.user_observations.map(x => `• ${x}`).join("\n");
-      } else {
-        userObsEl.textContent = ev.user_observations || "Analyzed replica visual features.";
-      }
+      targetObsEl.textContent = Array.isArray(ev.target_observations)
+        ? ev.target_observations.map(x => `• ${x}`).join("\n")
+        : (ev.target_observations || "Analyzed target reference scene elements.");
     }
 
-    // Unbiased Critique
+    const userObsEl = document.getElementById("user-obs-text");
+    if (userObsEl) {
+      userObsEl.textContent = Array.isArray(ev.user_observations)
+        ? ev.user_observations.map(x => `• ${x}`).join("\n")
+        : (ev.user_observations || "Analyzed replica visual features.");
+    }
+
     const summaryEl = document.getElementById("eval-summary-text");
     if (summaryEl) summaryEl.textContent = ev.unbiased_critique || ev.summary_comment || "";
 
-    // Matched & Discrepant Features
     const featuresRow = document.getElementById("eval-features-row");
     if (featuresRow) {
       featuresRow.innerHTML = "";
@@ -1468,8 +1437,7 @@ document.addEventListener("DOMContentLoaded", () => {
         pill.textContent = `✓ ${f}`;
         featuresRow.appendChild(pill);
       });
-      const discrepancies = ev.discrepancies || ev.divergent_features || [];
-      discrepancies.forEach(f => {
+      (ev.discrepancies || ev.divergent_features || []).forEach(f => {
         const pill = document.createElement("span");
         pill.className = "feature-pill-divergent";
         pill.textContent = `⚠️ ${f}`;
@@ -1477,7 +1445,6 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     }
 
-    // Badges
     const badgeRow = document.getElementById("eval-badges-row");
     if (badgeRow) {
       badgeRow.innerHTML = "";
@@ -1490,7 +1457,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // Single-Shot Attempt Status Reel
   function renderHistoryReel() {
     const reel = document.getElementById("history-reel-container");
     const countBadge = document.getElementById("history-count");
@@ -1501,23 +1467,8 @@ document.addEventListener("DOMContentLoaded", () => {
     state.generations.forEach((gen) => {
       const img = document.createElement("img");
       img.src = gen.image_data;
-      img.className = `history-thumb ${idx === state.generations.length - 1 ? "selected" : ""}`;
-      img.title = `Prompt: ${gen.prompt.slice(0, 50)}... (Score: ${gen.evaluation?.total_score || "N/A"})`;
-      img.addEventListener("click", () => {
-        playAudioTone("click");
-        document.querySelectorAll(".history-thumb").forEach(t => t.classList.remove("selected"));
-        img.classList.add("selected");
-
-        if (activeImg) activeImg.src = gen.image_data;
-        if (compareGenImg) compareGenImg.src = gen.image_data;
-        if (promptInput) promptInput.value = gen.prompt;
-        updateCharCount();
-        state.currentImage = gen.image_data;
-        state.currentEvaluation = gen.evaluation;
-        renderEvaluationScorecard(gen.evaluation);
-      });
       img.className = "history-thumb selected";
-      img.title = `Final Generation - Score: ${gen.evaluation?.total_score || 'N/A'}/100`;
+      img.title = `Final Generation — Score: ${gen.evaluation?.total_score ?? "N/A"}/100`;
       reel.appendChild(img);
 
       const summaryNote = document.createElement("span");
@@ -1549,11 +1500,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       playAudioTone("success");
       submitBtn.disabled = true;
-      submitBtn.innerHTML = `<span class="awsui-spinner-inline"></span><span>Submitting...</span>`;
-      submitBtn.innerHTML = `
-        <span class="awsui-spinner-inline"></span>
-        <span>Locking In Score...</span>
-      `;
+      submitBtn.innerHTML = `<span class="awsui-spinner-inline"></span><span>Locking In Score...</span>`;
 
       try {
         const resp = await fetch("/api/submit", {
@@ -1568,14 +1515,13 @@ document.addEventListener("DOMContentLoaded", () => {
         const data = await resp.json();
 
         if (data.success) {
+          state.isSubmitted = true;
           refreshCompetitionState();
           updateDashboardProgressRing(data.submission.ai_score, data.submission.tier_badge);
           showToast(
-            `Masterpiece locked in with AI Score: ${data.submission.ai_score}!`,
+            `Score locked in! AI Judge Match: ${data.submission.ai_score}/100 under ${state.participant.name}.`,
             "success"
           );
-          state.isSubmitted = true;
-          showToast(`Score locked in! AI Judge Match: ${data.submission.ai_score}/100 under ${state.participant.name}.`, "success");
           showScreen("leaderboard");
         } else {
           showToast(data.error || "Submission failed.", "error");
@@ -1584,13 +1530,6 @@ document.addEventListener("DOMContentLoaded", () => {
         showToast("Error submitting masterpiece.", "error");
       } finally {
         submitBtn.disabled = false;
-        submitBtn.innerHTML = `<span>🏆 Submit to Leaderboard</span>`;
-      }
-    });
-  }
-
-  // ---------------------------------------------------------------------------
-  // 7. LEADERBOARD & HOME "TOP PLAYERS" WIDGET
         submitBtn.innerHTML = state.isSubmitted
           ? `<span>🏆 Score Saved — View Leaderboard</span>`
           : `<span>🏆 Lock In &amp; Save Score</span>`;
@@ -1599,7 +1538,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // ---------------------------------------------------------------------------
-  // 7. LEADERBOARD (WITH DUAL-IMAGE INSPECTION)
+  // 7. LEADERBOARD & HOME "TOP PLAYERS" WIDGET
   // ---------------------------------------------------------------------------
   const leaderboardBody = document.getElementById("leaderboard-table-body");
   const leaderboardFilter = document.getElementById("leaderboard-cat-filter");
@@ -1726,7 +1665,6 @@ document.addEventListener("DOMContentLoaded", () => {
               <button type="button" class="pq-btn-outline-pill btn-sm inspect-entry-btn">Inspect</button>
             </div>
           </td>
-          <td><button class="awsui-btn-secondary btn-sm inspect-entry-btn">Inspect Match</button></td>
         `;
 
         const voteBtn = tr.querySelector(".btn-vote-applause");
@@ -1753,14 +1691,18 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         tr.querySelector(".inspect-entry-btn").addEventListener("click", () => {
-          openImageModal(
-            entry.image_data,
-            `"${entry.prompt}" — ${entry.player_name} (${entry.player_email || ""}) | Score: ${entry.composite_score} pts`
-          openDualImageModal(
-            entry.target_image,
-            entry.image_data,
-            `"${entry.prompt}" — ${entry.player_name} (${entry.player_email || ''}) | Match Score: ${entry.ai_score}/100 pts\nJudge: ${entry.unbiased_critique || ''}`
-          );
+          if (entry.target_image) {
+            openDualImageModal(
+              entry.target_image,
+              entry.image_data,
+              `"${entry.prompt}" — ${entry.player_name} (${entry.player_email || ""}) | Match Score: ${entry.ai_score}/100 pts${entry.unbiased_critique ? " | Judge: " + entry.unbiased_critique : ""}`
+            );
+          } else {
+            openImageModal(
+              entry.image_data,
+              `"${entry.prompt}" — ${entry.player_name} (${entry.player_email || ""}) | Score: ${entry.composite_score} pts`
+            );
+          }
         });
 
         leaderboardBody.appendChild(tr);
@@ -1775,22 +1717,22 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // ---------------------------------------------------------------------------
-  // 8. IMAGE ZOOM & DUAL INSPECTION MODAL
+  // 8. IMAGE ZOOM & DUAL-COMPARISON MODAL
   // ---------------------------------------------------------------------------
   const imageModal = document.getElementById("image-modal");
   const modalSingleView = document.getElementById("modal-single-view");
-  const modalFullImage = document.getElementById("modal-full-image");
+  const modalImg = document.getElementById("modal-full-image");
   const modalDualView = document.getElementById("modal-dual-view");
   const modalDualTarget = document.getElementById("modal-dual-target");
   const modalDualUser = document.getElementById("modal-dual-user");
   const modalCaption = document.getElementById("modal-image-caption");
   const closeImageModal = document.getElementById("close-image-modal");
 
-  function openSingleImageModal(src, caption) {
-    if (!imageModal || !modalFullImage) return;
+  function openImageModal(src, caption) {
+    if (!imageModal || !modalImg) return;
     if (modalSingleView) modalSingleView.classList.remove("hidden");
     if (modalDualView) modalDualView.classList.add("hidden");
-    modalFullImage.src = src;
+    modalImg.src = src;
     if (modalCaption) modalCaption.textContent = caption || "";
     imageModal.classList.remove("hidden");
   }
@@ -1803,22 +1745,6 @@ document.addEventListener("DOMContentLoaded", () => {
     if (modalDualUser) modalDualUser.src = userSrc || "";
     if (modalCaption) modalCaption.textContent = caption || "";
     imageModal.classList.remove("hidden");
-  }
-
-  if (viewTargetBtn) {
-    viewTargetBtn.addEventListener("click", () => {
-      if (state.targetImage) {
-        openSingleImageModal(state.targetImage, `Target Reference: "${state.currentChallenge?.title || ''}" (${state.currentChallenge?.category || ''})`);
-      }
-    });
-  }
-
-  if (viewFullBtn) {
-    viewFullBtn.addEventListener("click", () => {
-      if (state.currentImage) {
-        openSingleImageModal(state.currentImage, `Your Replica Prompt: "${promptInput ? promptInput.value : ''}"`);
-      }
-    });
   }
 
   if (closeImageModal) {

@@ -23,6 +23,7 @@ from image_generator import image_generator
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', os.urandom(24).hex())
+app.config['TEMPLATES_AUTO_RELOAD'] = True
 CORS(app)
 
 # Use threading mode for Socket.IO

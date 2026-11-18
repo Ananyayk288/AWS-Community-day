@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:ital,wght@0,600;0,700;0,800;1,700;1,800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/css/style.css?v=refined2">
+  <link rel="stylesheet" href="/static/css/style.css?v=pq-ux-v9">
 
   <!-- Socket.IO Client -->
   <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
@@ -43,102 +43,9 @@
   <div id="toast-container" class="awsui-toast-container" role="status" aria-live="polite"></div>
 
   <!-- =====================================================================
-       PROMPT QUEST APPLICATION SHELL (Sidebar + Main Area)
+       PROMPT QUEST APPLICATION SHELL (Full-Width Main Area — No Sidebar)
        ===================================================================== -->
-  <div class="pq-app-shell">
-
-    <!-- ===================================================================
-         LEFT VERTICAL SIDEBAR (Exact Reference Layout)
-         =================================================================== -->
-    <aside class="pq-sidebar" id="pq-sidebar">
-
-      <!-- Official AWS Logo Top Slot -->
-      <div class="pq-sidebar-brand" id="brand-home-trigger" role="button" tabindex="0" title="Prompt Quest Home">
-        <div class="navbar-logo-slot" id="navbar-logo-slot">
-          <img src="/static/images/aws-logo.png?v=refined2" alt="AWS" class="aws-nav-logo-img" id="aws-navbar-logo" draggable="false">
-        </div>
-      </div>
-
-      <!-- Sidebar Navigation Menu -->
-      <nav class="pq-sidebar-nav" aria-label="Main Navigation">
-        <button type="button" class="pq-nav-item nav-route-btn active" id="nav-home-btn" data-screen="identifier">
-          <span class="pq-nav-icon">
-            <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
-              <path d="M12 3.2L3 10.5V20a1 1 0 001 1h5.5v-6h5v6H20a1 1 0 001-1v-9.5L12 3.2z"/>
-            </svg>
-          </span>
-          <span class="pq-nav-label">Home</span>
-        </button>
-
-        <button type="button" class="pq-nav-item nav-route-btn" id="nav-studio-btn" data-screen="game">
-          <span class="pq-nav-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
-              <path d="M6 9H4.5a2.5 2.5 0 010-5H6M18 9h1.5a2.5 2.5 0 000-5H18M4 22h16M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22M18 2H6v7a6 6 0 0012 0V2z" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </span>
-          <span class="pq-nav-label">Play</span>
-        </button>
-
-        <button type="button" class="pq-nav-item nav-route-btn" id="nav-leaderboard-btn" data-screen="leaderboard">
-          <span class="pq-nav-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
-              <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </span>
-          <span class="pq-nav-label">Leaderboard</span>
-          <span class="pq-nav-badge" id="nav-submissions-count">0</span>
-        </button>
-
-        <button type="button" class="pq-nav-item nav-route-btn" id="nav-achievements-btn" data-screen="achievements">
-          <span class="pq-nav-icon">
-            <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
-              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-            </svg>
-          </span>
-          <span class="pq-nav-label">Achievements</span>
-        </button>
-
-        <button type="button" class="pq-nav-item nav-route-btn" id="nav-profile-btn" data-screen="profile">
-          <span class="pq-nav-icon">
-            <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
-              <path d="M12 12c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm0 2c-3.33 0-10 1.67-10 5v3h20v-3c0-3.33-6.67-5-10-5z"/>
-            </svg>
-          </span>
-          <span class="pq-nav-label">Profile</span>
-        </button>
-
-        <button type="button" class="pq-nav-item" id="open-admin-btn">
-          <span class="pq-nav-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
-              <circle cx="12" cy="12" r="3"/>
-              <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/>
-            </svg>
-          </span>
-          <span class="pq-nav-label">Settings</span>
-        </button>
-      </nav>
-
-      <!-- Bottom Sidebar Cloud Card (Exact Match to Screenshot in Lavender & Charcoal) -->
-      <div class="pq-sidebar-footer">
-        <div class="pq-sidebar-cloud-card">
-          <div class="pq-cloud-icon-badge">
-            <svg viewBox="0 0 48 32" fill="none" width="40" height="26">
-              <path d="M38.5 28H12.5C7.25 28 3 23.75 3 18.5C3 13.78 6.44 9.87 10.95 9.12C12.88 4.4 17.52 1 23 1C29.89 1 35.54 6.36 35.97 13.14C41.05 13.63 45 17.9 45 23.1C45 25.81 42.09 28 38.5 28Z" stroke="#B69AFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </div>
-          <div class="pq-motto-stack">
-            <span>Think.</span>
-            <span>Prompt.</span>
-            <span class="motto-win">Win.</span>
-          </div>
-        </div>
-        <svg class="pq-sidebar-wave" viewBox="0 0 230 42" fill="none" preserveAspectRatio="none">
-          <path d="M0 38 Q95 28 230 2" stroke="#B69AFF" stroke-width="1.5" stroke-opacity="0.65" fill="none"/>
-          <path d="M0 41 Q115 32 230 12" stroke="#D8C8FF" stroke-width="0.75" stroke-opacity="0.28" fill="none"/>
-        </svg>
-      </div>
-
-    </aside>
+  <div class="pq-app-shell pq-no-sidebar">
 
     <!-- ===================================================================
          MAIN CONTENT COLUMN (Top Header Bar + Active View Screen)
@@ -148,20 +55,21 @@
       <!-- TOP HEADER BAR -->
       <header class="pq-topbar">
         <div class="pq-topbar-left">
-          <button type="button" class="pq-mobile-menu-btn" id="mobile-sidebar-toggle" aria-label="Toggle Navigation">
-            ☰
-          </button>
+          <div class="pq-topbar-brand" id="brand-home-trigger" role="button" tabindex="0" title="Prompt Quest Home">
+            <div class="navbar-logo-slot topbar-logo-slot" id="navbar-logo-slot">
+              <img src="/static/images/aws-logo.png?v=refined2" alt="AWS" class="aws-nav-logo-img" id="aws-navbar-logo" draggable="false">
+            </div>
+          </div>
           <span class="pq-sparkle-icon">✦</span>
           <span class="pq-topbar-title">Prompt Quest</span>
           <span class="pq-topbar-sub-pill">BUILD THE FUTURE</span>
         </div>
 
         <div class="pq-topbar-right">
-          <!-- Replay Opening Animation Button -->
-          <button type="button" class="pq-icon-btn" id="replay-intro-btn" title="Replay AWS Opening Animation">
-            <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M3.5 10a6.5 6.5 0 111.9 4.6M3.5 15V10h5" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
+          <!-- Leaderboard Button (Hidden on login page; visible only after login) -->
+          <button type="button" class="pq-btn-outline-pill btn-sm hidden" id="nav-leaderboard-btn" title="View Leaderboard">
+            <span>🏆 Leaderboard</span>
+            <span class="pq-nav-badge" id="nav-submissions-count">0</span>
           </button>
 
           <!-- Live Event Pill -->
@@ -181,12 +89,6 @@
             </div>
             <button type="button" class="pq-btn-switch" id="change-user-btn" title="Switch Builder">Switch</button>
           </div>
-
-          <!-- Default Avatar Badge (When not yet identified, matches screenshot) -->
-          <button type="button" class="pq-default-avatar-btn" id="default-avatar-trigger" title="Builder Identification">
-            <span class="pq-avatar-circle">A</span>
-            <span class="pq-avatar-chevron">⌄</span>
-          </button>
         </div>
 
         <!-- Topbar Glowing Bottom Accent Line -->
@@ -237,13 +139,6 @@
                 Craft the smartest prompts, tackle exciting challenges<br>
                 and climb the leaderboard!
               </p>
-
-              <div class="pq-hero-actions">
-                <button type="button" class="pq-btn-orange-pill" id="hero-enter-arena-btn">
-                  <span>Enter the Arena</span>
-                  <span class="btn-arrow">→</span>
-                </button>
-              </div>
             </div>
 
             <!-- Right Side 3D AI Robot Illustration -->
@@ -252,323 +147,56 @@
             </div>
           </div>
 
-          <!-- 2. FOUR HORIZONTAL STAT CARDS ROW -->
-          <div class="pq-stats-row">
+          <!-- 2. CENTERED ARENA BUILDER LOGIN CARD -->
+          <div class="pq-registration-section pq-login-centered" id="registration-card-dock">
+            <div class="pq-dash-card identifier-card pq-login-card-center">
 
-            <!-- Stat 1: Builders / Challenges -->
-            <div class="pq-stat-card">
-              <div class="pq-stat-icon">
-                <svg viewBox="0 0 32 32" fill="currentColor" width="32" height="32">
-                  <circle cx="16" cy="10" r="4.5"/>
-                  <circle cx="8" cy="13" r="3.2" opacity="0.75"/>
-                  <circle cx="24" cy="13" r="3.2" opacity="0.75"/>
-                  <path d="M9 25c0-3.8 3.1-6.5 7-6.5s7 2.7 7 6.5H9z"/>
-                  <path d="M2.5 25c0-2.8 2.2-5 5-5 .8 0 1.5.2 2.1.5-1.2 1.2-1.9 2.7-1.9 4.5H2.5z" opacity="0.7"/>
-                  <path d="M29.5 25h-5.2c0-1.8-.7-3.3-1.9-4.5.6-.3 1.3-.5 2.1-.5 2.8 0 5 2.2 5 5z" opacity="0.7"/>
-                </svg>
-              </div>
-              <div class="pq-stat-info">
-                <strong class="pq-stat-val" id="home-stat-players">16+</strong>
-                <span class="pq-stat-label" id="home-stat-players-label">Active Challenges</span>
-              </div>
-            </div>
+              <!-- Login Form (All original IDs preserved) -->
+              <form id="identifier-form" class="identifier-form" novalidate>
 
-            <!-- Stat 2: Frontier Tracks / Submissions -->
-            <div class="pq-stat-card">
-              <div class="pq-stat-icon">
-                <svg viewBox="0 0 32 32" fill="currentColor" width="30" height="30">
-                  <path d="M24 6h-2V4H10v2H8C5.8 6 4 7.8 4 10v1c0 3.9 3 7.2 6.8 7.7.9 2 2.7 3.5 4.2 3.9V26h-4v2h10v-2h-4v-3.4c1.5-.4 3.3-1.9 4.2-3.9C25 18.2 28 14.9 28 11v-1c0-2.2-1.8-4-4-4zM6 11v-1c0-1.1.9-2 2-2h2v6.5C7.7 14 6 12.6 6 11zm20 0c0 1.6-1.7 3-4 3.5V8h2c1.1 0 2 .9 2 2v1z"/>
-                </svg>
-              </div>
-              <div class="pq-stat-info">
-                <strong class="pq-stat-val" id="home-stat-tracks">8 Tracks</strong>
-                <span class="pq-stat-label" id="home-stat-tracks-label">Frontier Categories</span>
-              </div>
-            </div>
-
-            <!-- Stat 3: Live Now -->
-            <div class="pq-stat-card">
-              <div class="pq-stat-icon">
-                <svg viewBox="0 0 32 32" fill="currentColor" width="30" height="30">
-                  <path d="M18 3L7 18h8l-2 11 12-15h-8l1-11z"/>
-                </svg>
-              </div>
-              <div class="pq-stat-info">
-                <strong class="pq-stat-val pq-live-inline">
-                  <span id="home-stat-phase">Live Now</span>
-                  <span class="pq-green-dot"></span>
-                </strong>
-                <span class="pq-stat-label">Event in Progress</span>
-              </div>
-            </div>
-
-            <!-- Stat 4: Time Left -->
-            <div class="pq-stat-card">
-              <div class="pq-stat-icon">
-                <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.4" width="30" height="30">
-                  <circle cx="16" cy="16" r="11"/>
-                  <path d="M16 10v6l4 2.5" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-              </div>
-              <div class="pq-stat-info">
-                <strong class="pq-stat-val pq-mono-timer" id="home-stat-timer">00:05:00</strong>
-                <span class="pq-stat-label">Round Duration</span>
-              </div>
-            </div>
-
-          </div>
-
-          <!-- 3. THREE BOTTOM DASHBOARD CARDS ROW -->
-          <div class="pq-bottom-grid">
-
-            <!-- Card A: About the Game -->
-            <div class="pq-dash-card pq-about-card">
-              <div class="pq-about-left">
-                <div class="pq-card-heading-row">
-                  <span class="pq-slash">/</span>
-                  <h3>About the Game</h3>
-                </div>
-                <p class="pq-about-text">
-                  Put your prompting skills to the ultimate test in this AWS-powered challenge. Think creatively, be precise, and outsmart the competition!
-                </p>
-                <button type="button" class="pq-btn-outline-pill" id="about-learn-more-btn">
-                  <span>Learn More</span>
-                  <span>→</span>
-      </div>
-    </section>
-
-    <!-- ================================================================= -->
-    <!-- SCREEN 2: MAIN GAME (Dual-Image Comparison Arena + Prompt Studio) -->
-    <!-- ================================================================= -->
-    <section id="game-screen" class="view-screen">
-      <div class="game-container-layout">
-        
-        <!-- Top Status Strip -->
-        <div class="game-header-strip">
-          <div class="builder-welcome-meta">
-            <span class="meta-label">PARTICIPANT:</span>
-            <strong class="builder-display-name" id="game-builder-name">Student Builder</strong>
-            <span class="builder-display-email" id="game-builder-email">(email@domain.com)</span>
-          </div>
-
-          <div class="countdown-timer-pill" id="countdown-timer-pill" title="When this 180-second timer ends, your current prompt is automatically finalized and generated.">
-            <span class="timer-icon">⏱️</span>
-            <span class="timer-label" id="countdown-timer-label">AUTO-GENERATE IN</span>
-            <strong class="timer-digits" id="countdown-timer-display">03:00</strong>
-          </div>
-
-          <div class="game-theme-pill">
-            <span>MODE: <strong>1-SHOT CHALLENGE</strong></span>
-          </div>
-        </div>
-
-        <!-- DUAL-IMAGE COMPARISON ARENA -->
-        <div class="comparison-arena-grid">
-          
-          <!-- LEFT CARD: 🎯 Target Reference Image (Generated by Agent) -->
-          <div class="awsui-card arena-card arena-card-target" id="assigned-challenge-card">
-            
-            <div class="arena-card-header">
-              <span class="arena-badge-target">🎯 TARGET REFERENCE (TO MATCH)</span>
-              <div class="arena-actions-row">
-                <button class="btn-reroll-challenge" id="reroll-challenge-btn" title="Synthesize a new unique target challenge from the AI agent">
-                  🔄 New Target Image
-                </button>
-                <button class="awsui-btn-secondary btn-sm" id="view-target-image-btn">🔍 Zoom</button>
-              </div>
-              <div class="pq-about-art">
-                <img src="/static/images/about-cloud.png?v=refined2" alt="AWS Cloud Platform" class="pq-about-cloud-img" draggable="false">
-              </div>
-            </div>
-
-            <!-- Card B: Top Players -->
-            <div class="pq-dash-card pq-top-players-card">
-              <div class="pq-card-heading-between">
-                <div class="pq-card-heading-row">
-                  <span class="pq-slash">/</span>
-                  <h3>Top Players</h3>
-                </div>
-                <button type="button" class="pq-link-view-all" id="home-view-all-lb-btn">
-                  <span>View All</span>
-                  <span>→</span>
-                </button>
-              </div>
-
-              <div class="pq-mini-lb-list" id="home-top-players-list">
-                <!-- Populated dynamically from /api/leaderboard or benchmark defaults -->
-              </div>
-            </div>
-
-            <!-- Card C: Your Progress -->
-            <div class="pq-dash-card pq-progress-card">
-              <div class="pq-card-heading-row">
-                <span class="pq-slash">/</span>
-                <h3>Your Progress</h3>
-            </div>
-
-            <div class="target-meta-strip">
-              <div class="category-tag-pill" id="player-cat-badge">
-                <span class="cat-dot"></span>
-                <span id="player-cat-name">Category Loading...</span>
-              </div>
-              <h3 class="target-challenge-title" id="player-challenge-title">The Biosphere Hyper-Campus 2050</h3>
-            </div>
-
-            <div class="target-instruction-hint" id="target-instruction-hint">
-              <strong>Mission:</strong> Carefully inspect the subjects, colors, lighting angle, and environment in this target image. Describe them below to recreate a matching replica!
-            </div>
-
-            <!-- Target Image Viewport -->
-            <div class="canvas-viewport" id="target-viewport">
-              <img id="target-reference-image" class="canvas-image-output" src="" alt="Target Reference Image">
-              <div class="canvas-loading-overlay hidden" id="target-loading-overlay">
-                <div class="awsui-spinner"></div>
-                <h4>Agent Synthesizing Target Image...</h4>
-                <p>Generating a unique visual challenge for your session</p>
-              </div>
-            </div>
-
-            <!-- Visual Scene Clues / Keywords -->
-            <div class="keywords-block" style="margin-top: 12px;">
-              <span class="block-subtitle">SCENE ELEMENTS / INSPIRATION (Click to append)</span>
-              <div class="chips-flex-row" id="player-keywords-container"></div>
-            </div>
-
-          </div>
-
-          <!-- RIGHT CARD: 🎨 Your Generated Creation (From Your Typed Prompt) -->
-          <div class="awsui-card arena-card arena-card-user" id="user-creation-card">
-            
-            <div class="arena-card-header">
-              <span class="arena-badge-user">🎨 YOUR REPLICA GENERATION</span>
-              <div class="arena-actions-row">
-                <span class="engine-badge hidden" id="canvas-source-tag">Engine: Cloud AI</span>
-                <span class="latency-badge hidden" id="canvas-latency-tag">0.0s</span>
-                <button class="awsui-btn-secondary btn-sm" id="view-full-image-btn" disabled>🔍 Zoom</button>
-              </div>
-            </div>
-
-              <div class="pq-progress-ring-wrap">
-                <svg class="pq-circular-chart" viewBox="0 0 120 120">
-                  <circle class="pq-circle-bg" cx="60" cy="60" r="46" />
-                  <circle class="pq-circle-fill" id="home-progress-circle" cx="60" cy="60" r="46" stroke-dasharray="289" stroke-dashoffset="92" />
-                </svg>
-                <div class="pq-ring-center-text">
-                  <strong id="home-progress-pct">68%</strong>
-                </div>
-              </div>
-
-              <div class="pq-progress-footer">
-                <div class="pq-level-title" id="home-progress-level">Level 3</div>
-                <div class="pq-rank-sub" id="home-progress-tier">
-                  <span class="pq-star">★</span>
-                  <span id="home-progress-badge-text">Prompt Master</span>
-                </div>
-              </div>
-            </div>
-
-          </div>
-
-          <!-- 4. ARENA BUILDER REGISTRATION DOCK (Revealed / Scrolled to on "Enter the Arena") -->
-          <div class="pq-registration-section" id="registration-card-dock">
-            <div class="pq-dash-card identifier-card">
-
-              <div class="pq-reg-grid">
-                <!-- Left Info -->
-                <div class="pq-reg-narrative">
-                  <div class="pq-card-heading-row">
-                    <span class="pq-slash">/</span>
-                    <h3>Arena Builder Registration</h3>
-                  </div>
-                  <p class="pq-reg-lead">
-                    <strong>BUILD THE FUTURE – Imagine. Innovate. Create.</strong><br>
-                    Inspired by the <strong>AWS Student Builder Groups</strong> philosophy. Enter your builder alias and email to unlock your randomized challenge across the 8 frontier categories.
-                  </p>
-                  <div class="pq-reg-highlights">
-                    <div class="pq-reg-chip">✦ 8 Frontier Categories</div>
-                    <div class="pq-reg-chip">✦ 4-Pillar AI Judge (100 Pts)</div>
-                    <div class="pq-reg-chip">✦ Multi-Tier Flux &amp; Cloud AI</div>
-                  </div>
-                </div>
-
-                <!-- Right Form (All original IDs preserved) -->
-                <form id="identifier-form" class="identifier-form" novalidate>
-
-                  <div class="awsui-form-group">
-                    <div class="label-row-flex">
-                      <label for="identifier-name" class="awsui-label">
-                        Builder Alias / Full Name <span class="required-star">*</span>
-                      </label>
-                      <button type="button" class="btn-quick-demo" id="quick-demo-fill-btn">
-                        ⚡ Auto-Fill Builder
-                      </button>
-                    </div>
-                    <input
-                      type="text"
-                      id="identifier-name"
-                      class="awsui-text-input"
-                      placeholder="e.g. CloudDreamer or Alex Morgan"
-                      maxlength="40"
-                      autocomplete="name"
-                    >
-                  </div>
-
-                  <div class="awsui-form-group">
-                    <label for="identifier-email" class="awsui-label">
-                      Email Address <span class="required-star">*</span>
-                      <span class="label-hint">(Stores your score on the leaderboard)</span>
+                <div class="awsui-form-group">
+                  <div class="label-row-flex">
+                    <label for="identifier-name" class="awsui-label">
+                      Builder Alias / Full Name <span class="required-star">*</span>
                     </label>
-                    <input
-                      type="email"
-                      id="identifier-email"
-                      class="awsui-text-input"
-                      placeholder="builder@university.edu"
-                      autocomplete="email"
-                    >
-                  </div>
-
-                  <div id="identifier-error" class="identifier-error-msg hidden" role="alert"></div>
-
-                  <div class="form-action-group">
-                    <button type="button" class="pq-btn-orange-pill full-width-btn" id="start-game-btn">
-                      <span>Launch Prompt Arena &amp; Reveal Challenge</span>
-                      <span class="btn-arrow">→</span>
+                    <button type="button" class="btn-quick-demo" id="quick-demo-fill-btn">
+                      ⚡ Auto-Fill Builder
                     </button>
                   </div>
-
-                </form>
-            <div class="target-meta-strip">
-              <span class="category-tag-pill" style="background-color: var(--aws-orange-light); border-color: #FFD8A8; color: var(--aws-orange-hover);">
-                <span>✨ SYNTHESIZED GUESS</span>
-              </span>
-              <h3 class="target-challenge-title" id="replica-card-title">Your AI-Synthesized Image</h3>
-            </div>
-
-            <div class="target-instruction-hint" id="replica-instruction-hint" style="border-left-color: var(--aws-orange);">
-              <strong>One-Shot Rule:</strong> You get <strong>1 single generation</strong>. Craft your prompt before the <strong>180s timer</strong> ends (auto-generates at 00:00), or click <strong>Finalize &amp; Generate Image</strong> when ready.
-            </div>
-
-            <!-- The Image Viewport -->
-            <div class="canvas-viewport" id="image-viewport">
-              
-              <div class="canvas-empty-state" id="canvas-placeholder">
-                <div class="empty-icon">🎨</div>
-                <h4>Single-Shot Replica Canvas Ready</h4>
-                <p>Inspect the target image on the left, refine your prompt below, and click <strong>Finalize &amp; Generate Image</strong> (or let the 180s timer auto-generate).</p>
-                <span class="canvas-theme-watermark">BUILD THE FUTURE – 1-Shot Reverse-Engineering Challenge</span>
-              </div>
-
-              <img id="active-generated-image" class="canvas-image-output hidden" alt="Your Generated Creation">
-
-              <!-- Loading Overlay -->
-              <div class="canvas-loading-overlay hidden" id="generating-overlay">
-                <div class="awsui-spinner"></div>
-                <h4 id="gen-status-text">Finalizing &amp; Generating Your Image...</h4>
-                <p id="gen-sub-text">Interpreting prompt semantics &amp; generating image via Cloudflare Workers AI</p>
-                <div class="progress-track">
-                  <div class="progress-fill"></div>
+                  <input
+                    type="text"
+                    id="identifier-name"
+                    class="awsui-text-input"
+                    placeholder="e.g. CloudDreamer or Alex Morgan"
+                    maxlength="40"
+                    autocomplete="name"
+                  >
                 </div>
-              </div>
+
+                <div class="awsui-form-group">
+                  <label for="identifier-email" class="awsui-label">
+                    Email Address <span class="required-star">*</span>
+                    <span class="label-hint">(Stores your score on the leaderboard)</span>
+                  </label>
+                  <input
+                    type="email"
+                    id="identifier-email"
+                    class="awsui-text-input"
+                    placeholder="builder@university.edu"
+                    autocomplete="email"
+                  >
+                </div>
+
+                <div id="identifier-error" class="identifier-error-msg hidden" role="alert"></div>
+
+                <div class="form-action-group">
+                  <button type="button" class="pq-btn-orange-pill full-width-btn" id="start-game-btn">
+                    <span>Launch Prompt Arena &amp; Reveal Challenge</span>
+                    <span class="btn-arrow">→</span>
+                  </button>
+                </div>
+
+              </form>
 
             </div>
           </div>
@@ -590,359 +218,257 @@
                 <span class="builder-display-email" id="game-builder-email">(builder@aws.dev)</span>
               </div>
 
+              <div class="countdown-timer-pill" id="countdown-timer-pill" title="When this 180-second timer ends, your current prompt is automatically finalized and generated.">
+                <span class="timer-icon">⏱️</span>
+                <span class="timer-label" id="countdown-timer-label">AUTO-GENERATE IN</span>
+                <strong class="timer-digits" id="countdown-timer-display">03:00</strong>
+              </div>
+
               <div class="game-strip-actions">
                 <div class="game-theme-pill">
-                  <span>THEME: <strong>BUILD THE FUTURE — Imagine. Innovate. Create.</strong></span>
+                  <span>MODE: <strong>1-SHOT CHALLENGE</strong></span>
                 </div>
                 <button type="button" class="pq-btn-outline-pill btn-sm" id="studio-to-leaderboard-btn">
                   <span>🏆 Standings</span>
                 </button>
-            <!-- Single-Shot Attempt Status -->
-            <div class="history-reel-box" style="padding: 12px 0 0 0;">
-              <div class="history-reel-header">
-                <h5>Final Generation Attempt</h5>
-                <span class="history-count" id="history-count">0 / 1</span>
-              </div>
-              <div class="history-reel-scroll" id="history-reel-container">
-                <p class="history-empty" id="single-shot-status-text">1 chance remaining — prompt will auto-generate when the 180s timer reaches 00:00.</p>
               </div>
             </div>
 
-            <!-- Main Studio Grid -->
-            <div class="studio-two-col">
+            <!-- ROW 1: TARGET REFERENCE IMAGE (LEFT) + CLEAN PROMPT TEXT BOX (RIGHT) -->
+            <div class="pq-dual-arena-grid">
 
-              <!-- LEFT COLUMN: Challenge Brief & Target Reference Scene -->
-              <div class="studio-left-col">
+              <!-- LEFT CARD: Target Reference Scene -->
+              <div class="pq-dash-card challenge-box pq-arena-equal-card" id="assigned-challenge-card">
+                <div class="challenge-top-meta">
+                  <div class="category-tag-pill" id="player-cat-badge">
+                    <span class="cat-dot"></span>
+                    <span id="player-cat-name">Category Loading...</span>
+                  </div>
+                  <button type="button" class="btn-reroll-challenge" id="reroll-challenge-btn" title="Re-roll for another randomized challenge">
+                    🔄 Re-roll Quest
+                  </button>
+                </div>
 
-                <div class="pq-dash-card challenge-box" id="assigned-challenge-card">
+                <h2 class="challenge-main-title" id="player-challenge-title">Target Reference Scene</h2>
 
-                  <div class="challenge-top-meta">
-                    <div class="category-tag-pill" id="player-cat-badge">
-                      <span class="cat-dot"></span>
-                      <span id="player-cat-name">Future of Education</span>
-                    </div>
-                    <button type="button" class="btn-reroll-challenge" id="reroll-challenge-btn" title="Re-roll for another randomized challenge">
-                      🔄 Re-roll Quest
+                <div class="reference-target-card pq-arena-ref-fill">
+                  <div class="reference-target-header">
+                    <span class="reference-badge-pill">
+                      <span class="ref-dot"></span>
+                      <span>TARGET REFERENCE SCENE</span>
+                    </span>
+                    <button type="button" class="btn-inspect-ref" id="inspect-reference-btn">
+                      Inspect Reference ↗
                     </button>
                   </div>
-
-                  <!-- Challenge Title -->
-                  <h2 class="challenge-main-title" id="player-challenge-title">The Biosphere Hyper-Campus 2050</h2>
-
-                  <!-- Target Reference Visual Card -->
-                  <div class="reference-target-card">
-                    <div class="reference-target-header">
-                      <span class="reference-badge-pill">
-                        <span class="ref-dot"></span>
-                        <span>TARGET REFERENCE SCENE</span>
-                      </span>
-                      <button type="button" class="btn-inspect-ref" id="inspect-reference-btn">
-                        Inspect Reference ↗
-                      </button>
-                    </div>
-                    <div class="reference-visual-frame" id="reference-visual-frame">
-                      <img id="challenge-reference-img" class="challenge-reference-img" src="" alt="Challenge Reference Visual">
-                      <div class="reference-overlay-caption">
-                        <span>Study target composition &amp; lighting cues to craft your prompt</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <!-- Mission Brief -->
-                  <div class="mission-brief-block">
-                    <span class="block-subtitle">MISSION BRIEF</span>
-                    <p id="player-challenge-brief">Envision an open-air, nature-integrated university campus where AI holographic mentors and student pods harmonize with a living ecosystem.</p>
-                  </div>
-
-                  <!-- Visual Targets -->
-                  <div class="visual-targets-block">
-                    <span class="block-subtitle">TARGET VISUAL MOTIFS</span>
-                    <p id="player-visual-goals">Bioluminescent flora, floating interactive volumetric projections, solar-canopy glass pavilions.</p>
-                  </div>
-
-                  <!-- Inspiration Keywords -->
-                  <div class="keywords-block">
-                    <span class="block-subtitle">POWER-UP KEYWORDS (Click to inject)</span>
-                    <div class="chips-flex-row" id="player-keywords-container"></div>
-                  </div>
-
-                  <!-- 4-Pillar AI Rubric -->
-                  <div class="rubric-mini-box">
-                    <div class="rubric-header-row">
-                      <span>AI SCORING MATRIX (100 PTS)</span>
-                      <span class="std-badge">4 Pillars</span>
-                    </div>
-                    <div class="rubric-grid-2x2">
-                      <div class="rubric-pill-cell">
-                        <span class="cell-label">Relevance</span>
-                        <strong class="cell-pts">25 pts</strong>
-                      </div>
-                      <div class="rubric-pill-cell">
-                        <span class="cell-label">Creativity</span>
-                        <strong class="cell-pts">25 pts</strong>
-                      </div>
-                      <div class="rubric-pill-cell">
-                        <span class="cell-label">Prompt Craft</span>
-                        <strong class="cell-pts">25 pts</strong>
-                      </div>
-                      <div class="rubric-pill-cell">
-                        <span class="cell-label">Future Impact</span>
-                        <strong class="cell-pts">25 pts</strong>
-                      </div>
-                    </div>
-                  </div>
-
-                </div>
-
-                <!-- Session Generation History Reel -->
-                <div class="pq-dash-card history-reel-box">
-                  <div class="history-reel-header">
-                    <div class="pq-card-heading-row">
-                      <span class="pq-slash">/</span>
-                      <h5>Session Generations</h5>
-                    </div>
-                    <span class="history-count" id="history-count">0</span>
-                  </div>
-                  <div class="history-reel-scroll" id="history-reel-container">
-                    <p class="history-empty">No visuals synthesized yet. Craft your first prompt!</p>
+                  <div class="reference-visual-frame pq-arena-viewport-match" id="reference-visual-frame">
+                    <img id="challenge-reference-img" class="challenge-reference-img" src="" alt="Challenge Reference Visual">
                   </div>
                 </div>
-        </div>
+              </div>
 
-        <!-- PROMPT ENGINEERING CONSOLE (REVERSE-ENGINEERING STUDIO) -->
-        <div class="awsui-card prompt-card" style="margin-bottom: 20px;">
-          
-          <div class="prompt-header-row">
-            <span class="prompt-title">Reverse-Engineering Prompt Console</span>
-            <span class="char-counter" id="char-counter">0 chars / 0 words</span>
-          </div>
-
-          <!-- Anti-Cheat Security Notice Banner -->
-          <div class="anti-cheat-pill-strip">
-            <span class="badge-lock">🔒 Single-Shot &amp; Anti-Cheat:</span>
-            <span>You have <strong>180 seconds</strong> and <strong>1 generation chance</strong>. Auto-generates at 00:00 or when you click <strong>Finalize &amp; Generate</strong>. Meta-prompts referring to "the image on screen" are disqualified.</span>
-          </div>
-
-          <!-- Quick Modifiers -->
-          <div class="prompt-modifiers-row">
-            <span class="mod-label">Quick Modifiers:</span>
-            <button class="mod-pill-tag" data-insert=", cinematic volumetric lighting, atmospheric depth">💡 Volumetric Light</button>
-            <button class="mod-pill-tag" data-insert=", bioluminescent flora, ambient glow">✨ Bioluminescence</button>
-            <button class="mod-pill-tag" data-insert=", wide-angle cinematic establishing shot">📷 Wide Angle</button>
-            <button class="mod-pill-tag" data-insert=", solarpunk clean architecture, lush nature">🌿 Solarpunk Eco</button>
-            <button class="mod-pill-tag" data-insert=", holographic interactive data interface">🔮 Holographic</button>
-            <button class="mod-pill-tag" data-insert=", photorealistic 8k render, hyper-detailed">💎 8K Render</button>
-          </div>
-
-              <!-- RIGHT COLUMN: Prompt Console + Viewport + AI Scorecard -->
-              <div class="studio-right-col">
-
-                <!-- Prompt Engineering Console -->
-                <div class="pq-dash-card prompt-card">
-                  <div class="prompt-header-row">
-                    <div class="pq-card-heading-row">
-                      <span class="pq-slash">/</span>
-                      <span class="prompt-title">Prompt Engineering Console</span>
-                    </div>
-                    <div class="prompt-metrics-right">
-                      <span class="prompt-quality-pill" id="prompt-quality-indicator">Readiness: Waiting</span>
-                      <span class="char-counter" id="char-counter">0 chars / 0 words</span>
-                    </div>
+              <!-- RIGHT CARD: Clean Prompt Text Box Only -->
+              <div class="pq-dash-card prompt-card pq-arena-equal-card pq-prompt-side-card">
+                <div class="prompt-header-row">
+                  <div class="pq-card-heading-row">
+                    <span class="pq-slash">/</span>
+                    <span class="prompt-title">Your Prompt</span>
                   </div>
-
-                  <!-- Quick Modifiers -->
-                  <div class="prompt-modifiers-row">
-                    <span class="mod-label">Boosters:</span>
-                    <button type="button" class="mod-pill-tag" data-insert=", cinematic volumetric lighting, atmospheric god rays">💡 Volumetric Light</button>
-                    <button type="button" class="mod-pill-tag" data-insert=", bioluminescent botanical accents, ambient glow">✨ Bioluminescence</button>
-                    <button type="button" class="mod-pill-tag" data-insert=", ultra-wide establishing shot, rule of thirds">📷 Ultra-Wide</button>
-                    <button type="button" class="mod-pill-tag" data-insert=", solarpunk clean architecture, lush nature">🌿 Solarpunk</button>
-                    <button type="button" class="mod-pill-tag" data-insert=", floating holographic telemetry interface">🔮 Holographic</button>
-                    <button type="button" class="mod-pill-tag" data-insert=", photorealistic 8k octane render, ray-traced">💎 8K Render</button>
-                  </div>
-
-                  <!-- Textarea -->
-                  <div class="prompt-input-box">
-                    <textarea
-                      id="prompt-input"
-                      class="awsui-textarea"
-                      rows="3"
-                      placeholder="Craft your descriptive prompt: specify architecture, materials, lighting physics, atmosphere, and camera composition..."
-                    ></textarea>
-                  </div>
-
-                  <!-- Actions -->
-                  <div class="prompt-actions-bar">
-                    <button type="button" class="pq-btn-outline-pill" id="clear-prompt-btn">Clear</button>
-                    <button type="button" class="pq-btn-orange-pill" id="generate-image-btn">
-                      <span>⚡ Synthesize &amp; Score</span>
-                    </button>
-                    <button type="button" class="pq-btn-gold-lock" id="submit-masterpiece-btn" disabled>
-                      <span>🏆 Submit to Leaderboard</span>
-                    </button>
+                  <div class="prompt-metrics-right">
+                    <span class="prompt-quality-pill" id="prompt-quality-indicator">Readiness: Waiting</span>
+                    <span class="char-counter" id="char-counter">0 chars / 0 words</span>
                   </div>
                 </div>
 
-                <!-- Synthesis Viewport Card -->
-                <div class="pq-dash-card canvas-card">
-                  <div class="canvas-top-bar">
-                    <div class="canvas-status-tags">
-                      <span class="pq-slash">/</span>
-                      <span class="canvas-state-label" id="canvas-state-label">Synthesis Viewport</span>
-                      <span class="engine-badge hidden" id="canvas-source-tag">Engine: AI</span>
-                      <span class="latency-badge hidden" id="canvas-latency-tag">0.0s</span>
-                    </div>
-                    <div class="canvas-top-actions">
-                      <button type="button" class="pq-btn-outline-pill btn-sm hidden" id="toggle-compare-btn">
-                        ⇄ Compare Reference
-                      </button>
-                      <button type="button" class="pq-btn-outline-pill btn-sm" id="view-full-image-btn" disabled>
-                        ⛶ Full Screen
-                      </button>
-                    </div>
-                  </div>
-
-                  <div class="canvas-viewport" id="image-viewport">
-                    <div class="canvas-empty-state" id="canvas-placeholder">
-                      <div class="empty-icon-ring">✦</div>
-                      <h4>Visual Synthesizer Ready</h4>
-                      <p>Inspect the <strong>Target Reference Scene</strong> on the left, engineer your prompt above, and click <strong>Synthesize &amp; Score</strong>.</p>
-                      <span class="canvas-theme-watermark">PROMPT QUEST • THINK. PROMPT. WIN.</span>
-                    </div>
-
-                    <img id="active-generated-image" class="canvas-image-output hidden" alt="Generated Vision">
-
-                    <!-- Side-by-Side Comparison View -->
-                    <div id="comparison-split-view" class="comparison-split-view hidden">
-                      <div class="compare-pane">
-                        <span class="compare-pane-tag">Target Reference</span>
-                        <img id="compare-ref-img" src="" alt="Target Reference">
-                      </div>
-                      <div class="compare-pane">
-                        <span class="compare-pane-tag tag-orange">Your Generated Output</span>
-                        <img id="compare-gen-img" src="" alt="Generated Output">
-                      </div>
-                    </div>
-
-                    <!-- Loading Overlay -->
-                    <div class="canvas-loading-overlay hidden" id="generating-overlay">
-                      <div class="awsui-spinner"></div>
-                      <h4 id="gen-status-text">Synthesizing Future Vision...</h4>
-                      <p id="gen-sub-text">Rendering lighting semantics &amp; computing 4-pillar AI score</p>
-                      <div class="progress-track">
-                        <div class="progress-fill"></div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <!-- AI Judge Scorecard -->
-                  <div class="eval-scorecard-card hidden" id="ai-eval-preview-card">
-                    <div class="eval-card-top">
-                      <div class="eval-judge-info">
-                        <div class="judge-badge-icon">✦</div>
-                        <div>
-                          <h5>AI Judge Evaluation Scorecard</h5>
-                          <span class="eval-sub" id="eval-challenge-name">Challenge Evaluation</span>
-                        </div>
-                      </div>
-
-                      <div class="eval-score-total-box">
-                        <div class="eval-score-total">
-                          <span class="score-num" id="eval-total-score">88.5</span>
-                          <span class="score-max">/ 100</span>
-                        </div>
-                        <span class="tier-pill" id="eval-tier-pill">🏆 Grandmaster Builder</span>
-                      </div>
-                    </div>
-
-                    <div class="eval-pillars-row">
-                      <div class="pillar-box">
-                        <div class="pillar-label-line">
-                          <span>1. Challenge Alignment</span>
-                          <strong id="score-rel">23 / 25</strong>
-                        </div>
-                        <div class="pillar-bar"><div class="fill" id="bar-rel" style="width: 92%"></div></div>
-                      </div>
-
-                      <div class="pillar-box">
-                        <div class="pillar-label-line">
-                          <span>2. Creative Originality</span>
-                          <strong id="score-cre">21 / 25</strong>
-                        </div>
-                        <div class="pillar-bar"><div class="fill" id="bar-cre" style="width: 84%"></div></div>
-                      </div>
-
-                      <div class="pillar-box">
-                        <div class="pillar-label-line">
-                          <span>3. Prompt Engineering</span>
-                          <strong id="score-tec">22 / 25</strong>
-                        </div>
-                        <div class="pillar-bar"><div class="fill" id="bar-tec" style="width: 88%"></div></div>
-                      </div>
-
-                      <div class="pillar-box">
-                        <div class="pillar-label-line">
-                          <span>4. Future &amp; Social Impact</span>
-                          <strong id="score-imp">22.5 / 25</strong>
-                        </div>
-                        <div class="pillar-bar"><div class="fill" id="bar-imp" style="width: 90%"></div></div>
-                      </div>
-                    </div>
-
-                    <div class="eval-footer-critique">
-                      <p class="critique-text" id="eval-summary-text"></p>
-                      <div class="badges-flex" id="eval-badges-row"></div>
-                    </div>
-                  </div>
-
+                <!-- Single-Shot & Anti-Cheat Notice -->
+                <div class="anti-cheat-pill-strip">
+                  <span class="badge-lock">🔒 1-Shot Challenge:</span>
+                  <span><strong>180 seconds</strong> &amp; <strong>1 final generation</strong>. Auto-generates at 00:00 or when you click <strong>Finalize &amp; Generate</strong>.</span>
                 </div>
-          <!-- Prompt Textarea -->
-          <div class="prompt-input-box">
-            <textarea 
-              id="prompt-input" 
-              class="awsui-textarea" 
-              rows="3" 
-              placeholder="Observe the target reference image on the left. Describe what you see here (subjects, architectural structures, lighting direction, colors, camera view, rendering style)..."
-              autocomplete="off"
-              autocorrect="off"
-              spellcheck="false"
-            ></textarea>
+
+                <!-- Textarea -->
+                <div class="prompt-input-box pq-prompt-box-grow">
+                  <textarea
+                    id="prompt-input"
+                    class="awsui-textarea pq-textarea-tall"
+                    rows="10"
+                    placeholder="Observe the Target Reference Scene on the left. Describe the subject, action, environment, colors, lighting, and camera framing..."
+                    autocomplete="off"
+                    autocorrect="off"
+                    spellcheck="false"
+                  ></textarea>
+                </div>
+
+                <!-- Validation / Anti-Cheat Error Banner -->
+                <div id="prompt-error-msg" class="prompt-error-banner hidden" role="alert"></div>
+
+                <!-- Actions -->
+                <div class="prompt-actions-bar">
+                  <button type="button" class="pq-btn-outline-pill" id="clear-prompt-btn">Clear</button>
+                  <button type="button" class="pq-btn-orange-pill" id="generate-image-btn">
+                    <span>🚀 Finalize &amp; Generate Image</span>
+                  </button>
+                </div>
+              </div>
+
+            </div>
+
           </div>
+        </section>
 
-          <!-- Anti-Cheat / Validation Error Banner -->
-          <div id="prompt-error-msg" class="prompt-error-banner hidden"></div>
+        <!-- =============================================================== -->
+        <!-- SCREEN 3: PHOTO COMPARISON & AI JUDGE RESULTS                   -->
+        <!-- =============================================================== -->
+        <section id="results-screen" class="view-screen">
+          <div class="game-container-layout">
 
-          <!-- Actions -->
-          <div class="prompt-actions-bar">
-            <button class="awsui-btn-secondary" id="clear-prompt-btn">Clear</button>
-            <button class="awsui-btn-primary" id="generate-image-btn">
-              <span>🚀 Finalize &amp; Generate Image</span>
-            </button>
-            <button class="awsui-btn-dark" id="submit-masterpiece-btn" disabled>
-              <span>🏆 Score Auto-Saves on Finalize</span>
-            </button>
-          </div>
-
-        </div>
-
-        <!-- UNBIASED AI VISION JUDGE SCORECARD (Dual-Image Comparison) -->
-        <div class="eval-scorecard-card hidden" id="ai-eval-preview-card" style="margin-bottom: 24px;">
-          
-          <div class="eval-card-top">
-            <div class="eval-judge-info">
-              <span class="judge-badge-icon">🤖</span>
-              <div>
-                <h5>Unbiased AI Vision Judge Scorecard</h5>
-                <span class="eval-sub" id="eval-challenge-name">Visual Comparison: Target Reference vs Your Generation</span>
+            <!-- Results Header Strip -->
+            <div class="pq-dash-card game-header-strip pq-results-header-bar">
+              <div class="pq-card-heading-row">
+                <span class="pq-slash">/</span>
+                <h3 style="margin:0; font-size:18px;">Photo Comparison &amp; AI Judge Results</h3>
+              </div>
+              <div class="game-strip-actions">
+                <button type="button" class="pq-btn-gold-lock" id="submit-masterpiece-btn" disabled>
+                  <span>🏆 View Leaderboard</span>
+                </button>
+                <button type="button" class="pq-btn-outline-pill btn-sm" id="results-next-player-btn">
+                  <span>👤 Next Participant</span>
+                </button>
               </div>
             </div>
 
-            <div class="eval-score-total">
-              <span class="score-num" id="eval-total-score">88.5</span>
-              <span class="score-max">/100</span>
-              <span class="tier-pill" id="eval-tier-pill">🎯 MASTER REPLICATOR</span>
+            <!-- Side-by-Side Photo Comparison Row -->
+            <div class="pq-dual-arena-grid">
+
+              <!-- LEFT: Target Reference Photo -->
+              <div class="pq-dash-card pq-arena-equal-card">
+                <div class="canvas-top-bar">
+                  <div class="canvas-status-tags">
+                    <span class="reference-badge-pill">
+                      <span class="ref-dot"></span>
+                      <span>TARGET REFERENCE PHOTO</span>
+                    </span>
+                    <span class="pq-result-sub-title" id="result-target-title">Target Scene</span>
+                  </div>
+                  <button type="button" class="pq-btn-outline-pill btn-sm" id="result-zoom-target-btn">
+                    ⛶ Zoom
+                  </button>
+                </div>
+                <div class="pq-compare-photo-box">
+                  <img id="result-target-image" class="pq-compare-photo-img" src="" alt="Target Reference Photo">
+                </div>
+              </div>
+
+              <!-- RIGHT: User Generated Photo (with Generating Spinner State) -->
+              <div class="pq-dash-card pq-arena-equal-card">
+                <div class="canvas-top-bar">
+                  <div class="canvas-status-tags">
+                    <span class="pq-slash">/</span>
+                    <span class="canvas-state-label" id="canvas-state-label">Your Generated Photo</span>
+                    <span class="engine-badge hidden" id="canvas-source-tag">Engine: CLOUDFLARE-AI</span>
+                    <span class="latency-badge hidden" id="canvas-latency-tag">0.0s</span>
+                  </div>
+                  <button type="button" class="pq-btn-outline-pill btn-sm" id="view-full-image-btn" disabled>
+                    ⛶ Full Screen
+                  </button>
+                </div>
+                <div class="pq-compare-photo-box">
+                  <img id="active-generated-image" class="pq-compare-photo-img hidden" alt="Your Generated Photo">
+                  <div class="pq-results-loading-box" id="results-loading-overlay">
+                    <div class="awsui-spinner"></div>
+                    <h4 id="gen-status-text">Generating Your Image &amp; Running AI Judge...</h4>
+                    <p id="gen-sub-text">Synthesizing your prompt via Cloudflare Workers AI &amp; comparing both photos with Gemini Vision</p>
+                    <div class="progress-track">
+                      <div class="progress-fill"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
             </div>
-          </div>
+
+            <!-- Submitted Prompt Display -->
+            <div class="pq-dash-card pq-submitted-prompt-strip">
+              <span class="block-subtitle">YOUR SUBMITTED PROMPT</span>
+              <p id="result-submitted-prompt"></p>
+            </div>
+
+            <!-- Unbiased Dual-Image AI Vision Judge Scorecard -->
+            <div class="eval-scorecard-card hidden" id="ai-eval-preview-card">
+              <div class="eval-card-top">
+                <div class="eval-judge-info">
+                  <div class="judge-badge-icon">🤖</div>
+                  <div>
+                    <h5>Unbiased AI Vision Judge Scorecard</h5>
+                    <span class="eval-sub" id="eval-challenge-name">Dual-Image Visual Comparison</span>
+                  </div>
+                </div>
+
+                <div class="eval-score-total-box">
+                  <div class="eval-score-total">
+                    <span class="score-num" id="eval-total-score">0.0</span>
+                    <span class="score-max">/ 100</span>
+                  </div>
+                  <span class="tier-pill" id="eval-tier-pill">🎯 MATCH EVALUATED</span>
+                </div>
+              </div>
+
+              <div class="eval-pillars-row">
+                <div class="pillar-box">
+                  <div class="pillar-label-line">
+                    <span>1. Visual &amp; Composition</span>
+                    <strong id="score-rel">0 / 25</strong>
+                  </div>
+                  <div class="pillar-bar"><div class="fill" id="bar-rel" style="width: 0%"></div></div>
+                  <p class="pillar-comment" id="comm-rel"></p>
+                </div>
+
+                <div class="pillar-box">
+                  <div class="pillar-label-line">
+                    <span>2. Subject &amp; Action Match</span>
+                    <strong id="score-cre">0 / 25</strong>
+                  </div>
+                  <div class="pillar-bar"><div class="fill" id="bar-cre" style="width: 0%"></div></div>
+                  <p class="pillar-comment" id="comm-cre"></p>
+                </div>
+
+                <div class="pillar-box">
+                  <div class="pillar-label-line">
+                    <span>3. Style &amp; Realism</span>
+                    <strong id="score-tec">0 / 25</strong>
+                  </div>
+                  <div class="pillar-bar"><div class="fill" id="bar-tec" style="width: 0%"></div></div>
+                  <p class="pillar-comment" id="comm-tec"></p>
+                </div>
+
+                <div class="pillar-box">
+                  <div class="pillar-label-line">
+                    <span>4. Prompt Precision</span>
+                    <strong id="score-imp">0 / 25</strong>
+                  </div>
+                  <div class="pillar-bar"><div class="fill" id="bar-imp" style="width: 0%"></div></div>
+                  <p class="pillar-comment" id="comm-imp"></p>
+                </div>
+              </div>
+
+              <div class="eval-observations-grid">
+                <div class="eval-obs-box">
+                  <span class="block-subtitle">TARGET IMAGE AUDIT</span>
+                  <p id="target-obs-text"></p>
+                </div>
+                <div class="eval-obs-box">
+                  <span class="block-subtitle">YOUR REPLICA AUDIT</span>
+                  <p id="user-obs-text"></p>
+                </div>
+              </div>
+
+              <div class="eval-footer-critique">
+                <p class="critique-text" id="eval-summary-text"></p>
+                <div class="features-comparison-row" id="eval-features-row"></div>
+                <div class="badges-flex" id="eval-badges-row"></div>
+              </div>
+            </div>
 
           </div>
         </section>
@@ -997,65 +523,8 @@
                   </tr>
                 </tbody>
               </table>
-          <!-- 4 Objective Criteria Grid -->
-          <div class="eval-pillars-row">
-            <div class="pillar-box">
-              <div class="pillar-label-line">
-                <span>1. Visual &amp; Compositional Similarity</span>
-                <strong id="score-rel">23 / 25</strong>
-              </div>
-              <div class="pillar-bar"><div class="fill" id="bar-rel" style="width: 92%"></div></div>
-              <p class="pillar-comment" id="comm-rel" style="font-size: 11px; color: var(--aws-text-muted); margin-top: 4px;"></p>
             </div>
 
-            <div class="pillar-box">
-              <div class="pillar-label-line">
-                <span>2. Subject &amp; Key Elements Match</span>
-                <strong id="score-cre">21 / 25</strong>
-              </div>
-              <div class="pillar-bar"><div class="fill" id="bar-cre" style="width: 84%"></div></div>
-              <p class="pillar-comment" id="comm-cre" style="font-size: 11px; color: var(--aws-text-muted); margin-top: 4px;"></p>
-            </div>
-
-            <div class="pillar-box">
-              <div class="pillar-label-line">
-                <span>3. Style, Texture &amp; Medium</span>
-                <strong id="score-tec">22 / 25</strong>
-              </div>
-              <div class="pillar-bar"><div class="fill" id="bar-tec" style="width: 88%"></div></div>
-              <p class="pillar-comment" id="comm-tec" style="font-size: 11px; color: var(--aws-text-muted); margin-top: 4px;"></p>
-            </div>
-
-            <div class="pillar-box">
-              <div class="pillar-label-line">
-                <span>4. Prompt Precision &amp; Craft</span>
-                <strong id="score-imp">22.5 / 25</strong>
-              </div>
-              <div class="pillar-bar"><div class="fill" id="bar-imp" style="width: 90%"></div></div>
-              <p class="pillar-comment" id="comm-imp" style="font-size: 11px; color: var(--aws-text-muted); margin-top: 4px;"></p>
-            </div>
-          </div>
-
-          <!-- Grounded Visual Observations & Evidence Audit -->
-          <div class="eval-observations-box" id="eval-observations-box" style="margin-top: 14px; padding: 12px; background-color: var(--aws-bg-subtle); border-radius: var(--radius-sm); border: 1px solid var(--aws-border-subtle);">
-            <div style="font-size: 11.5px; font-weight: 700; color: var(--aws-text-primary); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">🔍 Visual Ground-Truth Evidence Audit</div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 11.5px; line-height: 1.5; color: var(--aws-text-secondary);" id="eval-obs-grid">
-              <div style="background: #FFF; padding: 8px 10px; border-radius: var(--radius-sm); border-left: 3px solid var(--sbg-purple);">
-                <strong style="color: var(--sbg-purple-dark); display: block; margin-bottom: 2px;">🎯 Target Image Observations:</strong>
-                <span id="target-obs-text">Analyzing reference features...</span>
-              </div>
-              <div style="background: #FFF; padding: 8px 10px; border-radius: var(--radius-sm); border-left: 3px solid var(--aws-orange);">
-                <strong style="color: var(--aws-orange-hover); display: block; margin-bottom: 2px;">🎨 Your Replica Observations:</strong>
-                <span id="user-obs-text">Analyzing generated features...</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Objective Critique & Feature Comparison -->
-          <div class="eval-footer-critique" style="margin-top: 12px;">
-            <p class="critique-text" id="eval-summary-text"></p>
-            <div class="features-comparison-row" id="eval-features-row"></div>
-            <div class="badges-flex" id="eval-badges-row" style="margin-top: 10px;"></div>
           </div>
         </section>
 
@@ -1320,23 +789,14 @@
   </div>
 
   <!-- =====================================================================
-       IMAGE & PROMPT INSPECTION MODAL
+       IMAGE & DUAL-COMPARISON INSPECTION MODAL
        ===================================================================== -->
   <div class="modal-backdrop hidden" id="image-modal" role="dialog" aria-modal="true">
-    <div class="awsui-image-modal-card">
-      <button type="button" class="modal-close-btn image-modal-close" id="close-image-modal" aria-label="Close">✕</button>
-      <img id="modal-full-image" src="" alt="Full resolution view">
-  <!-- Image Zoom & Comparison Modal -->
-  <div class="modal-backdrop hidden" id="image-modal">
     <div class="awsui-image-modal-card" style="max-width: 960px; width: 95%;">
-      <button class="modal-close-btn" id="close-image-modal">✕</button>
-      
-      <!-- Single Image Zoom View -->
-      <div id="modal-single-view" class="modal-single-container" style="display: flex; justify-content: center; width: 100%;">
-        <img id="modal-full-image" src="" alt="Full resolution view" style="max-height: 75vh; object-fit: contain;">
+      <button type="button" class="modal-close-btn image-modal-close" id="close-image-modal" aria-label="Close">✕</button>
+      <div id="modal-single-view" class="modal-single-container">
+        <img id="modal-full-image" src="" alt="Full resolution view">
       </div>
-
-      <!-- Dual Comparison View (used by Leaderboard Inspect) -->
       <div id="modal-dual-view" class="modal-dual-viewport hidden">
         <div class="modal-half-view">
           <span class="modal-view-label">🎯 Target Reference</span>
@@ -1347,12 +807,11 @@
           <img id="modal-dual-user" src="" alt="User Creation">
         </div>
       </div>
-
       <div class="image-modal-caption" id="modal-image-caption"></div>
     </div>
   </div>
 
   <!-- Client Script Engine -->
-  <script src="/static/js/battle.js?v=refined2"></script>
+  <script src="/static/js/battle.js?v=pq-ux-v5"></script>
 </body>
 </html>
