@@ -266,7 +266,43 @@ document.addEventListener("DOMContentLoaded", () => {
 
   let lastHandledPhase = null;
 
-  function applyLiveCompetitionState(payload) {
+  async function ensureParticipantActive() {
+    if (state.participant && state.participant.id) return state.participant;
+    try {
+      const storedName = localStorage.getItem("sbg_builder_name");
+      const storedEmail = localStorage.getItem("sbg_builder_email");
+      const inputName = identifierNameInput ? identifierNameInput.value.trim() : "";
+      const inputEmail = identifierEmailInput ? identifierEmailInput.value.trim() : "";
+
+      const name = inputName || storedName || `Builder-${Math.floor(100 + Math.random() * 900)}`;
+      const email = inputEmail || storedEmail || `${name.toLowerCase()}@aws-community.dev`;
+
+      const resp = await fetch("/api/join", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email })
+      });
+      const data = await resp.json();
+      if (resp.ok && data.success && data.participant) {
+        state.participant = data.participant;
+        state.timerDuration = Number(data.timer_duration) || 180;
+        const target = data.target_challenge || data.challenge;
+        state.currentChallenge = target;
+        updateUserNavProfile(name, email);
+        const gName = document.getElementById("game-builder-name");
+        const gEmail = document.getElementById("game-builder-email");
+        if (gName) gName.textContent = name;
+        if (gEmail) gEmail.textContent = `(${email})`;
+        renderAssignedChallenge(target);
+        return data.participant;
+      }
+    } catch (e) {
+      console.warn("Auto-join error:", e);
+    }
+    return null;
+  }
+
+  async function applyLiveCompetitionState(payload) {
     if (!payload) return;
     const prevPhase = state.compState ? state.compState.status : null;
     state.compState = payload;
@@ -348,62 +384,53 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
-    // 4. Live Player Experience reacting to Phase Changes
-    const phaseJustChanged = (prevPhase !== null && prevPhase !== currentPhase) || (lastHandledPhase !== currentPhase);
+    // 4. Live Global Screen Control & Transitions across All Tabs
+    const isFirstRun = lastHandledPhase === null;
+    const phaseChanged = lastHandledPhase !== currentPhase;
 
-    if (phaseJustChanged) {
+    if (phaseChanged) {
       lastHandledPhase = currentPhase;
 
       if (currentPhase === "battle") {
-        // HOST STARTED BATTLE ROUND!
-        if (state.participant) {
-          const activeScreen = document.querySelector(".view-screen.active");
-          if (!activeScreen || activeScreen.id === "identifier-screen") {
-            showScreen("game");
-            startChallengeTimer(payload.time_remaining || state.timerDuration || 180);
-            playAudioTone("success");
-            showToast(`⚔️ Round ${payload.round_number || 1} has begun! 180s on the clock!`, "success");
-          } else if (activeScreen.id === "game-screen") {
-            if (!state.hasGenerated) {
-              startChallengeTimer(payload.time_remaining || 180);
-              showToast("⚔️ Battle round timer synchronized!", "info");
-            }
-          }
-        } else {
-          showToast("🔥 The Battle Round has started! Enter your alias to join!", "info");
-        }
+        // --- 1. START BATTLE ROUND: Launch all players into Arena ---
+        await ensureParticipantActive();
+        unlockWorkspaceForNewSession();
+        showScreen("game");
+        startChallengeTimer(payload.time_remaining || state.timerDuration || 180);
+        playAudioTone("success");
+        showToast(`⚔️ Round ${payload.round_number || 1} Live! 180 seconds on the clock!`, "success");
+
       } else if (currentPhase === "showcase") {
-        // HOST SWITCHED TO SHOWCASE & VOTING!
-        const activeScreen = document.querySelector(".view-screen.active");
-        if (activeScreen && activeScreen.id === "game-screen" && !state.hasGenerated) {
-          stopChallengeTimer();
+        // --- 2. SHOWCASE & VOTING: Move all players to Leaderboard to vote ---
+        stopChallengeTimer();
+        if (!state.hasGenerated && state.participant) {
           lockWorkspaceAfterFinalize("⏰ Round Ended by Host", "ROUND OVER", "00:00");
-          showToast("⏰ Battle round ended! Switching to Showcase & Voting...", "warning");
-          setTimeout(() => {
-            showScreen("leaderboard");
-            loadLeaderboard();
-          }, 1200);
-        } else if (activeScreen && (activeScreen.id === "results-screen" || activeScreen.id === "identifier-screen")) {
-          showToast("🌟 Showcase & Voting is now LIVE! Cast your applause votes!", "info");
         }
+        showScreen("leaderboard");
         loadLeaderboard();
+        playAudioTone("success");
+        showToast("🌟 Showcase & Voting is now LIVE! Cast your applause votes with 👏!", "info");
+
       } else if (currentPhase === "leaderboard") {
-        // HOST REVEALED FINAL STANDINGS!
+        // --- 3. FINAL STANDINGS: Reveal official final rankings ---
         stopChallengeTimer();
         showScreen("leaderboard");
         loadLeaderboard();
         playAudioTone("success");
         showToast("🏆 Final Standings Announced! Check out the Hall of Future Builders!", "success");
+
       } else if (currentPhase === "lobby") {
-        // HOST RETURNED TO LOBBY
-        if (prevPhase === "battle" || prevPhase === "showcase" || prevPhase === "leaderboard") {
-          const activeScreen = document.querySelector(".view-screen.active");
-          if (activeScreen && activeScreen.id === "game-screen" && !state.hasGenerated) {
-            stopChallengeTimer();
-            showScreen("identifier");
-            showToast("Host returned competition to Lobby Mode.", "info");
-          }
+        // --- 4. LOBBY MODE: Return everyone to Lobby ---
+        stopChallengeTimer();
+        showScreen("identifier");
+        if (!isFirstRun) {
+          showToast("🟢 Competition returned to Lobby Mode.", "info");
         }
+      }
+    } else {
+      // Sync running timer during active battle if needed
+      if (currentPhase === "battle" && !state.hasGenerated && !state.timerInterval) {
+        startChallengeTimer(payload.time_remaining || 180);
       }
     }
   }
