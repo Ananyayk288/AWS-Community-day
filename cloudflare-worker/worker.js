@@ -6,8 +6,7 @@
  * 1. Create a Worker and paste this code, then click "Deploy".
  * 2. Settings -> Variables and Secrets -> Add Secret/Variable:
  *      Name: API_KEY   Value: <your-chosen-secret-key>
- * 3. Settings -> Bindings -> Add Binding -> Workers AI:
- *      Variable name: AI
+ * 3. Settings -> Bindings -> Add Binding -> Workers AI: Variable name: AI
  * 4. Copy your Worker URL (https://<name>.<subdomain>.workers.dev) and API_KEY
  *    into CF_WORKER_URL and CF_WORKER_API_KEY in your .env file.
  */
@@ -69,3 +68,4 @@ function json(data, status = 200) {
         headers: { "Content-Type": "application/json" },
     });
 }
+

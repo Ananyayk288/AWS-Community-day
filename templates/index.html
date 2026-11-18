@@ -310,7 +310,7 @@
           <!-- Anti-Cheat Security Notice Banner -->
           <div class="anti-cheat-pill-strip">
             <span class="badge-lock">🔒 Anti-Cheat Active:</span>
-            <span>Typing only (copy-paste is blocked). Meta-prompts referring to "the image on screen" or "same as above" are disqualified by the AI Judge.</span>
+            <span>Meta-prompts referring to "the image on screen" or "same as above" are disqualified by the AI Judge.</span>
           </div>
 
           <!-- Quick Modifiers -->
@@ -324,15 +324,13 @@
             <button class="mod-pill-tag" data-insert=", photorealistic 8k render, hyper-detailed">💎 8K Render</button>
           </div>
 
-          <!-- Textarea (No paste, no drop, no shortcuts) -->
+          <!-- Prompt Textarea -->
           <div class="prompt-input-box">
             <textarea 
               id="prompt-input" 
-              class="awsui-textarea no-paste-target" 
+              class="awsui-textarea" 
               rows="3" 
               placeholder="Observe the target reference image on the left. Describe what you see here (subjects, architectural structures, lighting direction, colors, camera view, rendering style)..."
-              onpaste="return false;"
-              ondrop="return false;"
               autocomplete="off"
               autocorrect="off"
               spellcheck="false"

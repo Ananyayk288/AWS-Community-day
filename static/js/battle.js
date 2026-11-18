@@ -530,41 +530,46 @@ document.addEventListener("DOMContentLoaded", () => {
     return { isValid: true, msg: "" };
   }
 
+  // Temporarily allow paste for testing (flip to true to re-enable Rule 1 anti-paste for live event)
+  const BLOCK_PASTE = false;
+
   if (promptInput) {
     promptInput.addEventListener("input", () => {
       updateCharCount();
       hidePromptError();
     });
 
-    // RULE 1: Block copy-pasting prompts
-    promptInput.addEventListener("paste", (e) => {
-      e.preventDefault();
-      playAudioTone("error");
-      showToast("🚫 Copy-pasting prompts is disabled for fair competition! You must type your visual description.", "error");
-      showPromptError("Copy-pasting is strictly disabled for fair play! Please type your prompt manually.");
-    });
-
-    // Block drag and drop text
-    promptInput.addEventListener("drop", (e) => {
-      e.preventDefault();
-      playAudioTone("error");
-      showToast("🚫 Drag and drop is disabled! Please type your prompt manually.", "error");
-    });
-
-    // Intercept keyboard paste shortcuts: Ctrl+V, Cmd+V, Shift+Insert
-    promptInput.addEventListener("keydown", (e) => {
-      if (((e.ctrlKey || e.metaKey) && (e.key === "v" || e.key === "V")) || (e.shiftKey && e.key === "Insert")) {
+    if (BLOCK_PASTE) {
+      // RULE 1: Block copy-pasting prompts
+      promptInput.addEventListener("paste", (e) => {
         e.preventDefault();
         playAudioTone("error");
-        showToast("🚫 Keyboard paste is disabled! Please type your prompt manually.", "error");
-        showPromptError("Keyboard paste shortcut is disabled. Please type your prompt manually.");
-      }
-    });
+        showToast("🚫 Copy-pasting prompts is disabled for fair competition! You must type your visual description.", "error");
+        showPromptError("Copy-pasting is strictly disabled for fair play! Please type your prompt manually.");
+      });
 
-    // Disable right-click context menu on textarea to prevent right-click Paste
-    promptInput.addEventListener("contextmenu", (e) => {
-      e.preventDefault();
-    });
+      // Block drag and drop text
+      promptInput.addEventListener("drop", (e) => {
+        e.preventDefault();
+        playAudioTone("error");
+        showToast("🚫 Drag and drop is disabled! Please type your prompt manually.", "error");
+      });
+
+      // Intercept keyboard paste shortcuts: Ctrl+V, Cmd+V, Shift+Insert
+      promptInput.addEventListener("keydown", (e) => {
+        if (((e.ctrlKey || e.metaKey) && (e.key === "v" || e.key === "V")) || (e.shiftKey && e.key === "Insert")) {
+          e.preventDefault();
+          playAudioTone("error");
+          showToast("🚫 Keyboard paste is disabled! Please type your prompt manually.", "error");
+          showPromptError("Keyboard paste shortcut is disabled. Please type your prompt manually.");
+        }
+      });
+
+      // Disable right-click context menu on textarea to prevent right-click Paste
+      promptInput.addEventListener("contextmenu", (e) => {
+        e.preventDefault();
+      });
+    }
   }
 
   function appendModifier(modifier) {
