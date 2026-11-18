@@ -3,7 +3,6 @@ Real-Scenario Challenge Management for BUILD THE FUTURE - AI Prompt Battle
 Movie Scenes and High-Action Real-World Scenarios
 Zero Repetition Engine (Dealt without replacement)
 """
-
 import os
 import io
 import json
