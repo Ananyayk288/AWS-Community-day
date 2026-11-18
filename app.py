@@ -29,7 +29,8 @@ CORS(app)
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
 
 ADMIN_CODE = os.getenv('ADMIN_CODE', 'builder2026')
-ROUND_DURATION = int(os.getenv('ROUND_DURATION_SECONDS', 300))
+ROUND_DURATION = int(os.getenv('ROUND_DURATION_SECONDS', 180))
+CHALLENGE_TIMER_SECONDS = int(os.getenv('CHALLENGE_TIMER_SECONDS', 180))
 
 # Competition Global State
 competition_state = {
@@ -109,11 +110,15 @@ def join_competition():
     target_challenge = challenge_manager.get_unique_target_challenge(participant_id=participant_id)
     seen_set = set([target_challenge["id"]])
 
+    now_ts = time.time()
     participant = {
         "id": participant_id,
         "name": name,
         "email": email,
-        "joined_at": time.time(),
+        "joined_at": now_ts,
+        "timer_started_at": now_ts,
+        "timer_duration": CHALLENGE_TIMER_SECONDS,
+        "has_generated": False,
         "assigned_challenge": target_challenge,
         "target_challenge": target_challenge,
         "seen_challenges": seen_set,
@@ -137,6 +142,7 @@ def join_competition():
         "participant": client_participant,
         "challenge": client_target,
         "target_challenge": client_target,
+        "timer_duration": CHALLENGE_TIMER_SECONDS,
         "state": competition_state
     })
 
@@ -165,6 +171,13 @@ def reroll_challenge():
     if not participant:
         return jsonify({"error": "Participant not found"}), 404
 
+    if participant.get("has_generated") or len(participant.get("generations", [])) >= 1:
+        return jsonify({
+            "success": False,
+            "already_generated": True,
+            "error": "Your target challenge is locked because you have already finalized your generation."
+        }), 403
+
     current_id = participant.get("assigned_challenge", {}).get("id")
     seen_set = participant.setdefault("seen_challenges", set())
     if current_id:
@@ -178,37 +191,108 @@ def reroll_challenge():
     seen_set.add(new_target["id"])
     participant["assigned_challenge"] = new_target
     participant["target_challenge"] = new_target
+    participant["timer_started_at"] = time.time()
 
     client_target = {k: v for k, v in new_target.items() if k != "hidden_prompt"}
     return jsonify({
         "success": True,
         "challenge": client_target,
-        "target_challenge": client_target
+        "target_challenge": client_target,
+        "timer_duration": CHALLENGE_TIMER_SECONDS
     })
 
 # -----------------------------------------------------------------------------
 # REST APIS - GENERATION & DUAL-IMAGE AI EVALUATION
 # -----------------------------------------------------------------------------
 
+def _record_submission(participant, target_challenge, prompt, image_data, eval_result):
+    """Stores or updates a participant's official scored submission on the leaderboard."""
+    existing = participant.get("submission")
+    submission_id = existing["id"] if existing else str(uuid.uuid4())
+    target_image_data = target_challenge.get("image_data")
+    client_target = {k: v for k, v in target_challenge.items() if k != "hidden_prompt"}
+
+    submission = {
+        "id": submission_id,
+        "participant_id": participant["id"],
+        "player_name": participant["name"],
+        "player_email": participant.get("email", ""),
+        "challenge": client_target,
+        "target_image": target_image_data,
+        "prompt": prompt,
+        "image_data": image_data,
+        "evaluation": eval_result,
+        "ai_score": eval_result["total_score"],
+        "tier": eval_result["tier"],
+        "tier_badge": eval_result["tier_badge"],
+        "special_badges": eval_result.get("special_badges", []),
+        "unbiased_critique": eval_result.get("unbiased_critique", ""),
+        "votes": existing.get("votes", 0) if existing else 0,
+        "submitted_at": time.time()
+    }
+
+    submissions[submission_id] = submission
+    participant["submission"] = submission
+    participant["status"] = "submitted"
+    votes.setdefault(submission_id, set())
+
+    socketio.emit("new_submission", {
+        "submission_id": submission_id,
+        "player_name": participant["name"],
+        "category": target_challenge.get("category", "Innovation"),
+        "challenge_title": target_challenge.get("title", "Visual Challenge"),
+        "ai_score": eval_result["total_score"],
+        "tier_badge": eval_result["tier_badge"]
+    })
+    broadcast_state()
+    return submission
+
+
 @app.route("/api/generate", methods=["POST"])
 def generate():
     data = request.get_json() or {}
     participant_id = data.get("participant_id")
     prompt = data.get("prompt", "").strip()
+    auto_triggered = bool(data.get("auto_triggered", False))
+
+    participant = participants.get(participant_id)
+
+    # Single-shot enforcement: each participant gets strictly ONE generation attempt
+    if participant and (participant.get("has_generated") or len(participant.get("generations", [])) >= 1):
+        return jsonify({
+            "success": False,
+            "already_generated": True,
+            "locked": True,
+            "error": "Only 1 generation attempt is allowed per participant. Your final image has already been generated."
+        }), 403
 
     if not prompt:
+        if auto_triggered and participant:
+            participant["has_generated"] = True
+            participant["status"] = "expired"
+            return jsonify({
+                "success": False,
+                "time_expired_empty": True,
+                "already_generated": True,
+                "locked": True,
+                "error": "Time expired (180s) with no prompt entered. Your attempt is now locked."
+            }), 400
         return jsonify({"error": "Prompt cannot be empty"}), 400
 
     # Anti-cheat check: Reject meta-prompts like "generate an image like the one on screen"
     is_valid, cheat_err = validate_prompt_anti_cheat(prompt)
     if not is_valid:
+        if auto_triggered and participant:
+            participant["has_generated"] = True
+            participant["status"] = "disqualified"
         return jsonify({
             "success": False,
             "is_cheating": True,
+            "already_generated": bool(auto_triggered),
+            "locked": bool(auto_triggered),
             "error": cheat_err
         }), 400
 
-    participant = participants.get(participant_id)
     target_challenge = None
     if participant:
         target_challenge = participant.get("target_challenge") or participant.get("assigned_challenge")
@@ -255,15 +339,27 @@ def generate():
         "source": gen_result.get("source"),
         "latency": gen_result.get("latency"),
         "evaluation": eval_result,
+        "auto_triggered": auto_triggered,
         "created_at": time.time()
     }
 
+    saved_submission = None
     if participant:
         participant["generations"].append(generation_record)
+        participant["has_generated"] = True
+        saved_submission = _record_submission(
+            participant=participant,
+            target_challenge=target_challenge,
+            prompt=prompt,
+            image_data=user_image_data,
+            eval_result=eval_result
+        )
 
     return jsonify({
         "success": True,
-        "generation": generation_record
+        "locked": True,
+        "generation": generation_record,
+        "submission": saved_submission
     })
 
 @app.route("/api/evaluate", methods=["POST"])
@@ -307,6 +403,13 @@ def submit_masterpiece():
     if not participant:
         return jsonify({"error": "Participant not found"}), 404
 
+    # If already finalized & auto-submitted on single-shot generation, return it directly
+    if participant.get("submission"):
+        return jsonify({
+            "success": True,
+            "submission": participant["submission"]
+        })
+
     target_challenge = participant.get("target_challenge") or participant.get("assigned_challenge")
     if not target_challenge:
         return jsonify({"error": "No target challenge assigned"}), 400
@@ -325,42 +428,13 @@ def submit_masterpiece():
         player_name=participant["name"]
     )
 
-    submission_id = str(uuid.uuid4())
-    client_target = {k: v for k, v in target_challenge.items() if k != "hidden_prompt"}
-    submission = {
-        "id": submission_id,
-        "participant_id": participant_id,
-        "player_name": participant["name"],
-        "player_email": participant.get("email", ""),
-        "challenge": client_target,
-        "target_image": target_image_data,
-        "prompt": prompt,
-        "image_data": image_data,
-        "evaluation": eval_result,
-        "ai_score": eval_result["total_score"],
-        "tier": eval_result["tier"],
-        "tier_badge": eval_result["tier_badge"],
-        "special_badges": eval_result.get("special_badges", []),
-        "unbiased_critique": eval_result.get("unbiased_critique", ""),
-        "votes": 0,
-        "submitted_at": time.time()
-    }
-
-    submissions[submission_id] = submission
-    participant["submission"] = submission
-    participant["status"] = "submitted"
-    votes[submission_id] = set()
-
-    # Broadcast new submission to all clients
-    socketio.emit("new_submission", {
-        "submission_id": submission_id,
-        "player_name": participant["name"],
-        "category": target_challenge.get("category", "Innovation"),
-        "challenge_title": target_challenge.get("title", "Visual Challenge"),
-        "ai_score": eval_result["total_score"],
-        "tier_badge": eval_result["tier_badge"]
-    })
-    broadcast_state()
+    submission = _record_submission(
+        participant=participant,
+        target_challenge=target_challenge,
+        prompt=prompt,
+        image_data=image_data,
+        eval_result=eval_result
+    )
 
     return jsonify({
         "success": True,

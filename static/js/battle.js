@@ -16,6 +16,13 @@ document.addEventListener("DOMContentLoaded", () => {
     currentImage: null,
     currentEvaluation: null,
     generations: [],
+    hasGenerated: false,
+    isGenerating: false,
+    isSubmitted: false,
+    timerDuration: 180,
+    timerRemaining: 180,
+    timerDeadline: null,
+    timerInterval: null,
     isAdmin: false,
     adminToken: null
   };
@@ -153,12 +160,14 @@ document.addEventListener("DOMContentLoaded", () => {
         localStorage.removeItem("sbg_participant_id");
       } catch (e) {}
 
+      stopChallengeTimer();
       state.participant = null;
       state.currentChallenge = null;
       state.targetImage = null;
       state.currentImage = null;
       state.currentEvaluation = null;
       state.generations = [];
+      unlockWorkspaceForNewSession();
 
       const userPill = document.getElementById("top-nav-user-pill");
       if (userPill) userPill.classList.add("hidden");
@@ -240,7 +249,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (resp.ok && data.success && data.participant) {
         playAudioTone("success");
+        unlockWorkspaceForNewSession();
         state.participant = data.participant;
+        state.timerDuration = Number(data.timer_duration) || 180;
 
         const target = data.target_challenge || data.challenge;
         state.currentChallenge = target;
@@ -265,9 +276,10 @@ document.addEventListener("DOMContentLoaded", () => {
         // Populate Assigned Unique Target Challenge & Image
         renderTargetChallenge(target);
 
-        // Transition to Main Game Screen
+        // Transition to Main Game Screen & start the 180-second single-shot countdown
         showScreen("game");
-        showToast(`Welcome, ${name}! Your unique target challenge has been assigned.`, "success");
+        startChallengeTimer(state.timerDuration);
+        showToast(`Welcome, ${name}! You have ${state.timerDuration}s and 1 final generation attempt.`, "success");
       } else {
         showIdentifierError(data.error || "Unable to register session. Please try again.");
       }
@@ -392,12 +404,16 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // Re-roll / Synthesize New Target Challenge
+  // Re-roll / Synthesize New Target Challenge (only before finalization)
   const rerollBtn = document.getElementById("reroll-challenge-btn");
   if (rerollBtn) {
     rerollBtn.addEventListener("click", async () => {
       if (!state.participant) {
         showToast("Please register on the identification page first.", "error");
+        return;
+      }
+      if (state.hasGenerated || state.isGenerating) {
+        showToast("Your challenge is locked after finalizing your generation.", "error");
         return;
       }
       playAudioTone("click");
@@ -415,16 +431,18 @@ document.addEventListener("DOMContentLoaded", () => {
         const newTarget = data.target_challenge || data.challenge;
         if (data.success && newTarget) {
           renderTargetChallenge(newTarget);
-          showToast(`Agent Synthesized New Target: "${newTarget.title}"`, "info");
-          // Reset current user guess state for fresh challenge
           resetUserGuessState();
+          startChallengeTimer(Number(data.timer_duration) || state.timerDuration || 180);
+          showToast(`New Target Assigned: "${newTarget.title}" (180s timer reset)`, "info");
         } else {
           showToast(data.error || "Could not synthesize new target challenge.", "error");
         }
       } catch (e) {
         showToast("Network error creating target challenge.", "error");
       } finally {
-        rerollBtn.disabled = false;
+        if (!state.hasGenerated) {
+          rerollBtn.disabled = false;
+        }
         rerollBtn.textContent = "🔄 New Target Image";
         if (targetOverlay) targetOverlay.classList.add("hidden");
       }
@@ -440,7 +458,10 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     if (placeholder) placeholder.classList.remove("hidden");
     if (viewFullBtn) viewFullBtn.disabled = true;
-    if (submitBtn) submitBtn.disabled = true;
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = `<span>🏆 Score Auto-Saves on Finalize</span>`;
+    }
     const evalCard = document.getElementById("ai-eval-preview-card");
     if (evalCard) evalCard.classList.add("hidden");
   }
@@ -573,7 +594,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function appendModifier(modifier) {
-    if (!promptInput) return;
+    if (!promptInput || state.hasGenerated || state.isGenerating) return;
     const current = promptInput.value.trim();
     if (!current) {
       promptInput.value = modifier.startsWith(",") ? modifier.replace(/^,\s*/, "") : modifier;
@@ -588,6 +609,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   document.querySelectorAll(".mod-pill-tag").forEach(pill => {
     pill.addEventListener("click", () => {
+      if (state.hasGenerated || state.isGenerating) return;
       playAudioTone("click");
       appendModifier(pill.dataset.insert);
     });
@@ -596,6 +618,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const clearBtn = document.getElementById("clear-prompt-btn");
   if (clearBtn) {
     clearBtn.addEventListener("click", () => {
+      if (state.hasGenerated || state.isGenerating) return;
       if (promptInput) {
         promptInput.value = "";
         updateCharCount();
@@ -606,7 +629,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // ---------------------------------------------------------------------------
-  // 4. IMAGE GENERATION (AS IT IS) & DUAL-IMAGE AI JUDGE
+  // 4. 180-SECOND SINGLE-SHOT TIMER & FINALIZE / AUTO-GENERATE ENGINE
   // ---------------------------------------------------------------------------
   const generateBtn = document.getElementById("generate-image-btn");
   const submitBtn = document.getElementById("submit-masterpiece-btn");
@@ -614,19 +637,171 @@ document.addEventListener("DOMContentLoaded", () => {
   const activeImg = document.getElementById("active-generated-image");
   const placeholder = document.getElementById("canvas-placeholder");
   const viewFullBtn = document.getElementById("view-full-image-btn");
+  const timerPill = document.getElementById("countdown-timer-pill");
+  const timerLabelEl = document.getElementById("countdown-timer-label");
+  const timerDisplayEl = document.getElementById("countdown-timer-display");
 
-  async function handleGenerate() {
+  function formatClock(totalSec) {
+    const clamped = Math.max(0, Math.ceil(totalSec));
+    const mins = Math.floor(clamped / 60);
+    const secs = clamped % 60;
+    return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+  }
+
+  function setTimerBadge(labelText, displayText, modeClass = "") {
+    if (timerLabelEl) timerLabelEl.textContent = labelText;
+    if (timerDisplayEl) timerDisplayEl.textContent = displayText;
+    if (timerPill) {
+      timerPill.classList.remove("timer-warning", "timer-danger", "timer-locked");
+      if (modeClass) timerPill.classList.add(modeClass);
+    }
+  }
+
+  function stopChallengeTimer() {
+    if (state.timerInterval) {
+      clearInterval(state.timerInterval);
+      state.timerInterval = null;
+    }
+  }
+
+  function startChallengeTimer(durationSeconds = 180) {
+    stopChallengeTimer();
+    if (state.hasGenerated) return;
+
+    state.timerRemaining = Math.max(1, Number(durationSeconds) || 180);
+    state.timerDeadline = Date.now() + state.timerRemaining * 1000;
+
+    const tick = () => {
+      if (state.hasGenerated || state.isGenerating) {
+        stopChallengeTimer();
+        return;
+      }
+      const remainingMs = state.timerDeadline - Date.now();
+      const remainingSec = Math.max(0, Math.ceil(remainingMs / 1000));
+      state.timerRemaining = remainingSec;
+
+      if (remainingSec <= 0) {
+        stopChallengeTimer();
+        setTimerBadge("TIME UP", "00:00", "timer-danger");
+        handleGenerate({ autoTriggered: true });
+        return;
+      }
+
+      let cls = "";
+      if (remainingSec <= 10) {
+        cls = "timer-danger";
+        if (remainingSec === 10 || remainingSec <= 5) {
+          playAudioTone("click");
+        }
+      } else if (remainingSec <= 30) {
+        cls = "timer-warning";
+      }
+      setTimerBadge("AUTO-GENERATE IN", formatClock(remainingSec), cls);
+    };
+
+    tick();
+    state.timerInterval = setInterval(tick, 500);
+  }
+
+  function setPromptControlsDisabled(disabled) {
+    if (promptInput) promptInput.disabled = disabled;
+    if (clearBtn) clearBtn.disabled = disabled;
+    if (rerollBtn) rerollBtn.disabled = disabled;
+    document.querySelectorAll(".mod-pill-tag, .keyword-chip").forEach(btn => {
+      btn.disabled = disabled;
+    });
+  }
+
+  function lockWorkspaceAfterFinalize(btnText = "✅ Final Image Generated (1/1 Used)", timerLabel = "FINALIZED", timerDigits = "LOCKED") {
+    stopChallengeTimer();
+    state.hasGenerated = true;
+    state.isGenerating = false;
+    setPromptControlsDisabled(true);
+    if (rerollBtn) rerollBtn.classList.add("hidden");
+    if (generateBtn) {
+      generateBtn.disabled = true;
+      generateBtn.innerHTML = `<span>${btnText}</span>`;
+    }
+    setTimerBadge(timerLabel, timerDigits, "timer-locked");
+  }
+
+  function unlockWorkspaceForNewSession() {
+    stopChallengeTimer();
+    state.hasGenerated = false;
+    state.isGenerating = false;
+    state.isSubmitted = false;
+    state.generations = [];
+    state.timerRemaining = state.timerDuration || 180;
+    resetUserGuessState();
+    if (promptInput) {
+      promptInput.value = "";
+      updateCharCount();
+    }
+    hidePromptError();
+    setPromptControlsDisabled(false);
+    if (rerollBtn) {
+      rerollBtn.classList.remove("hidden");
+      rerollBtn.disabled = false;
+    }
+    if (generateBtn) {
+      generateBtn.disabled = false;
+      generateBtn.innerHTML = `<span>🚀 Finalize &amp; Generate Image</span>`;
+    }
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = `<span>🏆 Score Auto-Saves on Finalize</span>`;
+    }
+    const countBadge = document.getElementById("history-count");
+    if (countBadge) countBadge.textContent = "0 / 1";
+    const reel = document.getElementById("history-reel-container");
+    if (reel) {
+      reel.innerHTML = `<p class="history-empty" id="single-shot-status-text">1 chance remaining — prompt will auto-generate when the 180s timer reaches 00:00.</p>`;
+    }
+    setTimerBadge("AUTO-GENERATE IN", formatClock(state.timerDuration || 180), "");
+  }
+
+  async function handleGenerate(options = {}) {
+    const autoTriggered = Boolean(options && options.autoTriggered);
+
+    if (state.hasGenerated || state.isGenerating) {
+      return;
+    }
+
     const prompt = promptInput ? promptInput.value.trim() : "";
+
     if (!prompt) {
-      showToast("Please type a descriptive prompt to recreate the target image.", "error");
-      showPromptError("Prompt cannot be empty. Describe the target image.");
+      if (autoTriggered) {
+        // Timer ran out with empty prompt: lock attempt on both client and server
+        lockWorkspaceAfterFinalize("⏱️ Time Expired (No Prompt)", "TIME EXPIRED", "00:00");
+        playAudioTone("error");
+        const msg = "⏱️ 180 seconds elapsed with no prompt entered. Your single attempt has expired.";
+        showPromptError(msg);
+        showToast(msg, "error");
+        const reel = document.getElementById("history-reel-container");
+        if (reel) reel.innerHTML = `<p class="history-empty">Attempt expired at 00:00 with an empty prompt.</p>`;
+        if (state.participant) {
+          fetch("/api/generate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              participant_id: state.participant.id,
+              challenge_id: state.currentChallenge ? state.currentChallenge.id : null,
+              prompt: "",
+              auto_triggered: true
+            })
+          }).catch(() => {});
+        }
+        return;
+      }
+      showToast("Please type a descriptive prompt before finalizing.", "error");
+      showPromptError("Prompt cannot be empty. Describe the target image before finalizing.");
       if (promptInput) promptInput.focus();
       return;
     }
 
-    // Client-side anti-cheat check
+    // Client-side anti-cheat check (allow fixing if manual click before time expires)
     const antiCheat = validateClientAntiCheat(prompt);
-    if (!antiCheat.isValid) {
+    if (!antiCheat.isValid && !autoTriggered) {
       playAudioTone("error");
       showToast(antiCheat.msg, "error");
       showPromptError(antiCheat.msg);
@@ -637,19 +812,33 @@ document.addEventListener("DOMContentLoaded", () => {
     hidePromptError();
 
     if (!state.currentChallenge) {
-      showToast("No target challenge assigned. Please identify or re-roll.", "error");
+      showToast("No target challenge assigned. Please identify first.", "error");
       return;
     }
 
-    playAudioTone("click");
+    // Lock inputs & stop timer while finalizing
+    stopChallengeTimer();
+    state.isGenerating = true;
+    setPromptControlsDisabled(true);
+    setTimerBadge(autoTriggered ? "TIME UP — GENERATING" : "FINALIZING", autoTriggered ? "00:00" : formatClock(state.timerRemaining), "timer-warning");
+
+    if (autoTriggered) {
+      showToast("⏱️ 180s timer finished! Auto-generating your final image now...", "info");
+    } else {
+      playAudioTone("click");
+    }
+
     if (generateBtn) {
       generateBtn.disabled = true;
       generateBtn.innerHTML = `
         <span class="awsui-spinner-inline"></span>
-        <span>Synthesizing &amp; AI Judge Comparing...</span>
+        <span>${autoTriggered ? "Time Up — Auto-Generating & Judging..." : "Finalizing, Generating & Judging..."}</span>
       `;
     }
     if (overlay) overlay.classList.remove("hidden");
+
+    let finalizedSuccessfully = false;
+    let permanentlyLocked = false;
 
     try {
       const resp = await fetch("/api/generate", {
@@ -658,7 +847,8 @@ document.addEventListener("DOMContentLoaded", () => {
         body: JSON.stringify({
           participant_id: state.participant ? state.participant.id : null,
           challenge_id: state.currentChallenge.id,
-          prompt: prompt
+          prompt: prompt,
+          auto_triggered: autoTriggered
         })
       });
       const data = await resp.json();
@@ -667,16 +857,32 @@ document.addEventListener("DOMContentLoaded", () => {
         playAudioTone("error");
         showPromptError(data.error || "Cheat phrase detected.");
         showToast(data.error || "Cheat phrase detected.", "error");
+        if (data.locked || autoTriggered) {
+          permanentlyLocked = true;
+          lockWorkspaceAfterFinalize("🚫 Attempt Disqualified", "DISQUALIFIED", "00:00");
+        }
+        return;
+      }
+
+      if (!resp.ok && data.already_generated) {
+        permanentlyLocked = true;
+        playAudioTone("error");
+        showPromptError(data.error || "You have already used your single generation attempt.");
+        showToast(data.error || "Only 1 generation attempt is allowed.", "error");
+        lockWorkspaceAfterFinalize("✅ Final Image Already Generated", "FINALIZED", "LOCKED");
         return;
       }
 
       if (data.success && data.generation) {
         const gen = data.generation;
+        finalizedSuccessfully = true;
+        permanentlyLocked = true;
 
         playAudioTone("success");
         state.currentImage = gen.image_data;
         state.currentEvaluation = gen.evaluation;
-        state.generations.push(gen);
+        state.generations = [gen];
+        state.isSubmitted = Boolean(data.submission);
 
         // Display user generated image
         if (activeImg) {
@@ -702,12 +908,22 @@ document.addEventListener("DOMContentLoaded", () => {
         // Render AI Evaluation Scorecard (Dual-Image Comparison)
         renderEvaluationScorecard(gen.evaluation);
 
-        // Update Attempt Reel
+        // Update single-shot status thumbnail
         renderHistoryReel();
 
-        // Enable Submit button
-        if (submitBtn) submitBtn.disabled = false;
-        showToast(`Visual synthesized! AI Judge Match Score: ${gen.evaluation?.total_score || 0}/100`, "success");
+        // Lock workspace permanently for this participant (single-shot complete)
+        lockWorkspaceAfterFinalize("✅ Final Image Generated (1/1 Used)", "FINALIZED", "1 / 1");
+
+        // Enable Leaderboard button (score already auto-saved)
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = state.isSubmitted
+            ? `<span>🏆 Score Saved — View Leaderboard</span>`
+            : `<span>🏆 Lock In &amp; Save Score</span>`;
+        }
+
+        const prefix = autoTriggered ? "⏱️ Auto-generated at 00:00! " : "Final image generated & score saved! ";
+        showToast(`${prefix}AI Judge Match Score: ${gen.evaluation?.total_score || 0}/100`, "success");
       } else {
         playAudioTone("error");
         const errMsg = data.error || "Image generation failed. Please check CF_WORKER_URL and CF_WORKER_API_KEY in .env.";
@@ -716,17 +932,27 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     } catch (err) {
       console.error(err);
-      showToast("Network error generating visual.", "error");
+      showToast("Network error generating visual. You can retry finalizing.", "error");
     } finally {
-      if (generateBtn) {
-        generateBtn.disabled = false;
-        generateBtn.innerHTML = `<span>⚡ Generate My Image &amp; Judge Match</span>`;
-      }
+      state.isGenerating = false;
       if (overlay) overlay.classList.add("hidden");
+      if (!finalizedSuccessfully && !permanentlyLocked) {
+        // Restore controls on transient failure or manual cheat rejection so user isn't stuck
+        setPromptControlsDisabled(false);
+        if (generateBtn) {
+          generateBtn.disabled = false;
+          generateBtn.innerHTML = `<span>🚀 Finalize &amp; Generate Image</span>`;
+        }
+        if (!autoTriggered && state.timerRemaining > 0) {
+          startChallengeTimer(state.timerRemaining);
+        } else {
+          setTimerBadge("RETRY FINALIZE", "00:00", "timer-warning");
+        }
+      }
     }
   }
 
-  if (generateBtn) generateBtn.addEventListener("click", handleGenerate);
+  if (generateBtn) generateBtn.addEventListener("click", () => handleGenerate({ autoTriggered: false }));
 
   // ---------------------------------------------------------------------------
   // 5. RENDER UNBIASED AI EVALUATION SCORECARD
@@ -839,37 +1065,31 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // Attempt Reel
+  // Single-Shot Attempt Status Reel
   function renderHistoryReel() {
     const reel = document.getElementById("history-reel-container");
     const countBadge = document.getElementById("history-count");
-    if (countBadge) countBadge.textContent = state.generations.length;
+    if (countBadge) countBadge.textContent = `${state.generations.length} / 1`;
     if (!reel) return;
 
     reel.innerHTML = "";
-    state.generations.forEach((gen, idx) => {
+    state.generations.forEach((gen) => {
       const img = document.createElement("img");
       img.src = gen.image_data;
-      img.className = `history-thumb ${idx === state.generations.length - 1 ? "selected" : ""}`;
-      img.title = `Attempt #${idx + 1} - Score: ${gen.evaluation?.total_score || 'N/A'}/100`;
-      img.addEventListener("click", () => {
-        playAudioTone("click");
-        document.querySelectorAll(".history-thumb").forEach(t => t.classList.remove("selected"));
-        img.classList.add("selected");
-
-        if (activeImg) activeImg.src = gen.image_data;
-        if (promptInput) promptInput.value = gen.prompt;
-        updateCharCount();
-        state.currentImage = gen.image_data;
-        state.currentEvaluation = gen.evaluation;
-        renderEvaluationScorecard(gen.evaluation);
-      });
+      img.className = "history-thumb selected";
+      img.title = `Final Generation - Score: ${gen.evaluation?.total_score || 'N/A'}/100`;
       reel.appendChild(img);
+
+      const summaryNote = document.createElement("span");
+      summaryNote.className = "history-empty";
+      summaryNote.style.marginLeft = "10px";
+      summaryNote.textContent = `Finalized (${gen.auto_triggered ? "Auto-generated at 00:00" : "Manual Finalize"}) — Score: ${gen.evaluation?.total_score ?? 0}/100`;
+      reel.appendChild(summaryNote);
     });
   }
 
   // ---------------------------------------------------------------------------
-  // 6. SUBMIT MASTERPIECE & STORE SCORE
+  // 6. SUBMIT MASTERPIECE / VIEW LEADERBOARD
   // ---------------------------------------------------------------------------
   if (submitBtn) {
     submitBtn.addEventListener("click", async () => {
@@ -877,8 +1097,13 @@ document.addEventListener("DOMContentLoaded", () => {
         showToast("Please register on the identification page first.", "error");
         return;
       }
+      if (state.isSubmitted) {
+        playAudioTone("click");
+        showScreen("leaderboard");
+        return;
+      }
       if (!state.currentImage) {
-        showToast("Generate an image first before submitting.", "error");
+        showToast("Finalize and generate your image first.", "error");
         return;
       }
 
@@ -902,6 +1127,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const data = await resp.json();
 
         if (data.success) {
+          state.isSubmitted = true;
           showToast(`Score locked in! AI Judge Match: ${data.submission.ai_score}/100 under ${state.participant.name}.`, "success");
           showScreen("leaderboard");
         } else {
@@ -911,7 +1137,9 @@ document.addEventListener("DOMContentLoaded", () => {
         showToast("Error submitting masterpiece.", "error");
       } finally {
         submitBtn.disabled = false;
-        submitBtn.innerHTML = `<span>🏆 Lock In &amp; Save Score</span>`;
+        submitBtn.innerHTML = state.isSubmitted
+          ? `<span>🏆 Score Saved — View Leaderboard</span>`
+          : `<span>🏆 Lock In &amp; Save Score</span>`;
       }
     });
   }

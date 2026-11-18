@@ -128,6 +128,7 @@ class TestReversePromptBattle(unittest.TestCase):
         self.assertEqual(join_resp.status_code, 200)
         join_data = join_resp.get_json()
         self.assertTrue(join_data['success'])
+        self.assertEqual(join_data['timer_duration'], 180)
         pid = join_data['participant']['id']
         target_challenge = join_data['target_challenge']
 
@@ -138,7 +139,7 @@ class TestReversePromptBattle(unittest.TestCase):
         # Ensure hidden_prompt is NOT sent to client
         self.assertNotIn('hidden_prompt', target_challenge)
 
-        # 2. Test Anti-Cheat Rejection via API
+        # 2. Test Anti-Cheat Rejection via API (does not burn attempt on manual click)
         cheat_resp = self.client.post('/api/generate', json={
             'participant_id': pid,
             'challenge_id': target_challenge['id'],
@@ -148,7 +149,7 @@ class TestReversePromptBattle(unittest.TestCase):
         cheat_data = cheat_resp.get_json()
         self.assertTrue(cheat_data.get('is_cheating'))
 
-        # 3. Test Valid Cloudflare Worker Generation & Dual-Image AI Evaluation
+        # 3. Test Valid Cloudflare Worker Generation & Dual-Image AI Evaluation (Single Shot)
         valid_prompt = "A glowing futuristic research dome surrounded by crystalline spires and volumetric golden mist, 8k"
         sample_bytes = _make_sample_jpeg_bytes()
         mock_worker_resp = MagicMock()
@@ -166,9 +167,24 @@ class TestReversePromptBattle(unittest.TestCase):
         self.assertEqual(gen_resp.status_code, 200)
         gen_data = gen_resp.get_json()
         self.assertTrue(gen_data['success'])
+        self.assertTrue(gen_data['locked'])
+        self.assertIsNotNone(gen_data.get('submission'))
         gen_rec = gen_data['generation']
         self.assertEqual(gen_rec.get('source'), 'cloudflare-workers-ai')
         self.assertIsNotNone(gen_rec.get('image_data'))
+
+        # 3b. Enforce Single-Shot: Second generation attempt & reroll must be rejected with 403
+        second_gen = self.client.post('/api/generate', json={
+            'participant_id': pid,
+            'challenge_id': target_challenge['id'],
+            'prompt': 'A second unauthorized retry prompt'
+        })
+        self.assertEqual(second_gen.status_code, 403)
+        self.assertTrue(second_gen.get_json().get('already_generated'))
+
+        reroll_after = self.client.post('/api/target-challenge/new', json={'participant_id': pid})
+        self.assertEqual(reroll_after.status_code, 403)
+        self.assertTrue(reroll_after.get_json().get('already_generated'))
 
         # Check AI Judge Dual-Image Scorecard
         ev = gen_rec['evaluation']
@@ -181,7 +197,7 @@ class TestReversePromptBattle(unittest.TestCase):
         self.assertIn('prompt_precision', ev['breakdown'])
         self.assertIn('unbiased_critique', ev)
 
-        # 4. Submit Masterpiece & Store Score Under Name & Email
+        # 4. Submit Masterpiece (idempotent — returns already auto-saved submission without duplicate)
         sub_resp = self.client.post('/api/submit', json={
             'participant_id': pid,
             'prompt': valid_prompt,
@@ -190,20 +206,47 @@ class TestReversePromptBattle(unittest.TestCase):
         self.assertEqual(sub_resp.status_code, 200)
         sub_data = sub_resp.get_json()
         self.assertTrue(sub_data['success'])
+        self.assertEqual(sub_data['submission']['id'], gen_data['submission']['id'])
         self.assertEqual(sub_data['submission']['player_name'], 'Sarah Connor')
         self.assertEqual(sub_data['submission']['player_email'], 'sarah@resistance.edu')
         self.assertIsNotNone(sub_data['submission'].get('target_image'))
 
-        # 5. Leaderboard Check
+        # 5. Leaderboard Check (exact single entry for this participant)
         lb_resp = self.client.get('/api/leaderboard')
         self.assertEqual(lb_resp.status_code, 200)
         lb_data = lb_resp.get_json()
-        self.assertGreaterEqual(len(lb_data['leaderboard']), 1)
-        top = lb_data['leaderboard'][0]
+        sarah_entries = [e for e in lb_data['leaderboard'] if e['participant_id'] == pid]
+        self.assertEqual(len(sarah_entries), 1)
+        top = sarah_entries[0]
         self.assertEqual(top['player_name'], 'Sarah Connor')
         self.assertEqual(top['player_email'], 'sarah@resistance.edu')
         self.assertIn('target_image', top)
         self.assertIn('image_data', top)
+
+    def test_timer_expiry_empty_prompt_locks_attempt(self):
+        join_resp = self.client.post('/api/join', json={
+            'name': 'Timeout Tester',
+            'email': 'timeout@test.edu'
+        })
+        pid = join_resp.get_json()['participant']['id']
+
+        exp_resp = self.client.post('/api/generate', json={
+            'participant_id': pid,
+            'prompt': '',
+            'auto_triggered': True
+        })
+        self.assertEqual(exp_resp.status_code, 400)
+        exp_data = exp_resp.get_json()
+        self.assertTrue(exp_data.get('time_expired_empty'))
+        self.assertTrue(exp_data.get('locked'))
+
+        # Subsequent manual attempt after timer expiry must be blocked with 403
+        retry_resp = self.client.post('/api/generate', json={
+            'participant_id': pid,
+            'prompt': 'Late prompt after timeout'
+        })
+        self.assertEqual(retry_resp.status_code, 403)
+        self.assertTrue(retry_resp.get_json().get('already_generated'))
 
     def test_admin_authentication(self):
         auth_resp = self.client.post('/api/admin/auth', json={'admin_code': ADMIN_CODE})

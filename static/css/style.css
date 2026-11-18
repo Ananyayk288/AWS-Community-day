@@ -1806,8 +1806,90 @@ button:disabled, .awsui-btn-primary:disabled, .awsui-btn-dark:disabled {
   z-index: 10;
 }
 
+/* 180-Second Single-Shot Countdown Timer Pill */
+.countdown-timer-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(135deg, #232F3E 0%, #312E81 100%);
+  color: #FFFFFF;
+  border: 1px solid rgba(255, 153, 0, 0.45);
+  box-shadow: 0 2px 10px rgba(35, 47, 62, 0.18);
+  transition: background-color 0.25s ease, border-color 0.25s ease, transform 0.2s ease;
+}
+
+.countdown-timer-pill .timer-icon {
+  font-size: 15px;
+}
+
+.countdown-timer-pill .timer-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #CBD5E1;
+}
+
+.countdown-timer-pill .timer-digits {
+  font-family: var(--font-mono, monospace);
+  font-size: 17px;
+  font-weight: 800;
+  color: #FF9900;
+  min-width: 52px;
+  text-align: center;
+}
+
+.countdown-timer-pill.timer-warning {
+  background: linear-gradient(135deg, #92400E 0%, #B45309 100%);
+  border-color: #FCD34D;
+}
+
+.countdown-timer-pill.timer-warning .timer-digits {
+  color: #FEF3C7;
+}
+
+.countdown-timer-pill.timer-danger {
+  background: linear-gradient(135deg, #991B1B 0%, #DC2626 100%);
+  border-color: #FCA5A5;
+  animation: timerUrgentPulse 0.9s infinite;
+}
+
+.countdown-timer-pill.timer-danger .timer-label,
+.countdown-timer-pill.timer-danger .timer-digits {
+  color: #FFFFFF;
+}
+
+.countdown-timer-pill.timer-locked {
+  background: #065F46;
+  border-color: #34D399;
+  animation: none;
+}
+
+.countdown-timer-pill.timer-locked .timer-label,
+.countdown-timer-pill.timer-locked .timer-digits {
+  color: #ECFDF5;
+}
+
+.awsui-textarea:disabled {
+  background-color: #F3F4F6;
+  color: #4B5563;
+  cursor: not-allowed;
+  opacity: 0.85;
+}
+
+@keyframes timerUrgentPulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.5); }
+  50% { transform: scale(1.03); box-shadow: 0 0 0 8px rgba(220, 38, 38, 0); }
+}
+
 /* Responsive */
 @media (max-width: 960px) {
+  .game-header-strip {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
   .studio-two-col, .comparison-arena-grid, .modal-dual-viewport {
     grid-template-columns: 1fr;
   }

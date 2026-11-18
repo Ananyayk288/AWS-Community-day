@@ -186,8 +186,14 @@
             <span class="builder-display-email" id="game-builder-email">(email@domain.com)</span>
           </div>
 
+          <div class="countdown-timer-pill" id="countdown-timer-pill" title="When this 180-second timer ends, your current prompt is automatically finalized and generated.">
+            <span class="timer-icon">⏱️</span>
+            <span class="timer-label" id="countdown-timer-label">AUTO-GENERATE IN</span>
+            <strong class="timer-digits" id="countdown-timer-display">03:00</strong>
+          </div>
+
           <div class="game-theme-pill">
-            <span>THEME: <strong>BUILD THE FUTURE</strong></span>
+            <span>MODE: <strong>1-SHOT CHALLENGE</strong></span>
           </div>
         </div>
 
@@ -257,7 +263,7 @@
             </div>
 
             <div class="target-instruction-hint" id="replica-instruction-hint" style="border-left-color: var(--aws-orange);">
-              <strong>Status:</strong> Type your descriptive prompt below and click <strong>Generate My Image &amp; Judge Match</strong>.
+              <strong>One-Shot Rule:</strong> You get <strong>1 single generation</strong>. Craft your prompt before the <strong>180s timer</strong> ends (auto-generates at 00:00), or click <strong>Finalize &amp; Generate Image</strong> when ready.
             </div>
 
             <!-- The Image Viewport -->
@@ -265,9 +271,9 @@
               
               <div class="canvas-empty-state" id="canvas-placeholder">
                 <div class="empty-icon">🎨</div>
-                <h4>Replica Canvas Ready</h4>
-                <p>Inspect the target image on the left, type what you see below, and click <strong>Generate My Image &amp; Judge Match</strong>.</p>
-                <span class="canvas-theme-watermark">BUILD THE FUTURE – Reverse-Engineering Challenge</span>
+                <h4>Single-Shot Replica Canvas Ready</h4>
+                <p>Inspect the target image on the left, refine your prompt below, and click <strong>Finalize &amp; Generate Image</strong> (or let the 180s timer auto-generate).</p>
+                <span class="canvas-theme-watermark">BUILD THE FUTURE – 1-Shot Reverse-Engineering Challenge</span>
               </div>
 
               <img id="active-generated-image" class="canvas-image-output hidden" alt="Your Generated Creation">
@@ -275,7 +281,7 @@
               <!-- Loading Overlay -->
               <div class="canvas-loading-overlay hidden" id="generating-overlay">
                 <div class="awsui-spinner"></div>
-                <h4 id="gen-status-text">Synthesizing Your Visual Guess...</h4>
+                <h4 id="gen-status-text">Finalizing &amp; Generating Your Image...</h4>
                 <p id="gen-sub-text">Interpreting prompt semantics &amp; generating image via Cloudflare Workers AI</p>
                 <div class="progress-track">
                   <div class="progress-fill"></div>
@@ -284,14 +290,14 @@
 
             </div>
 
-            <!-- Session Generation Reel -->
+            <!-- Single-Shot Attempt Status -->
             <div class="history-reel-box" style="padding: 12px 0 0 0;">
               <div class="history-reel-header">
-                <h5>Attempt Reel (This Session)</h5>
-                <span class="history-count" id="history-count">0</span>
+                <h5>Final Generation Attempt</h5>
+                <span class="history-count" id="history-count">0 / 1</span>
               </div>
               <div class="history-reel-scroll" id="history-reel-container">
-                <p class="history-empty">No attempts yet. Type your first prompt below!</p>
+                <p class="history-empty" id="single-shot-status-text">1 chance remaining — prompt will auto-generate when the 180s timer reaches 00:00.</p>
               </div>
             </div>
 
@@ -309,8 +315,8 @@
 
           <!-- Anti-Cheat Security Notice Banner -->
           <div class="anti-cheat-pill-strip">
-            <span class="badge-lock">🔒 Anti-Cheat Active:</span>
-            <span>Meta-prompts referring to "the image on screen" or "same as above" are disqualified by the AI Judge.</span>
+            <span class="badge-lock">🔒 Single-Shot &amp; Anti-Cheat:</span>
+            <span>You have <strong>180 seconds</strong> and <strong>1 generation chance</strong>. Auto-generates at 00:00 or when you click <strong>Finalize &amp; Generate</strong>. Meta-prompts referring to "the image on screen" are disqualified.</span>
           </div>
 
           <!-- Quick Modifiers -->
@@ -344,10 +350,10 @@
           <div class="prompt-actions-bar">
             <button class="awsui-btn-secondary" id="clear-prompt-btn">Clear</button>
             <button class="awsui-btn-primary" id="generate-image-btn">
-              <span>⚡ Generate My Image &amp; Judge Match</span>
+              <span>🚀 Finalize &amp; Generate Image</span>
             </button>
             <button class="awsui-btn-dark" id="submit-masterpiece-btn" disabled>
-              <span>🏆 Lock In &amp; Save Score</span>
+              <span>🏆 Score Auto-Saves on Finalize</span>
             </button>
           </div>
 
