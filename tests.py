@@ -1,111 +1,258 @@
 import unittest
+import base64
+import io
+from unittest.mock import patch, MagicMock
+from PIL import Image
 from app import app, ADMIN_CODE
 from challenges import OFFICIAL_CATEGORIES, challenge_manager
-from evaluation import ai_evaluator
+from evaluation import ai_evaluator, validate_prompt_anti_cheat
+from image_generator import image_generator
 
-class TestFullWorkflow(unittest.TestCase):
+
+def _make_sample_jpeg_bytes():
+    buf = io.BytesIO()
+    Image.new("RGB", (64, 64), color=(180, 40, 40)).save(buf, format="JPEG")
+    return buf.getvalue()
+
+
+def _make_sample_jpeg_b64():
+    return base64.b64encode(_make_sample_jpeg_bytes()).decode("utf-8")
+
+
+class TestReversePromptBattle(unittest.TestCase):
     def setUp(self):
         self.client = app.test_client()
 
-    def test_end_to_end_battle_flow(self):
-        # 1. Join with Name and Email
+    def test_anti_cheat_validator(self):
+        # Rule 5: No user should have a prompt like "generate an image like the one on screen"
+        cheat_prompts = [
+            "generate a image like the one on screen",
+            "generate an image like the one on screen",
+            "make it identical to the picture on screen",
+            "just copy the target image on screen",
+            "recreate the image on screen please",
+            "same as the picture above",
+            "duplicate the screen image",
+            "show me the same visual on screen"
+        ]
+        for p in cheat_prompts:
+            is_valid, msg = validate_prompt_anti_cheat(p)
+            self.assertFalse(is_valid, f"Failed to catch cheat prompt: '{p}'")
+            self.assertIn("Cheating", msg)
+
+        # Valid descriptive visual prompts must pass
+        valid_prompts = [
+            "A biophilic vertical skyscraper with cascading mist waterfalls and glowing skybridges at dusk, 8k render",
+            "Bioluminescent research pods floating on an azure mountain lake at sunrise, octane volumetric lighting",
+            "Autonomous solarpunk hydrofoil vessel skimming across coral reef waters in clear daylight"
+        ]
+        for vp in valid_prompts:
+            is_valid, msg = validate_prompt_anti_cheat(vp)
+            self.assertTrue(is_valid, f"Falsely rejected valid prompt: '{vp}' - {msg}")
+
+    def test_unique_target_challenge_generation(self):
+        # Rule 3: Each user should have a unique image given with zero repetitions
+        seen_ids = set()
+        for i in range(10):
+            t = challenge_manager.get_unique_target_challenge(participant_id=f"user-unique-{i}")
+            self.assertIsNotNone(t.get("image_data"))
+            self.assertIn(t["category"], OFFICIAL_CATEGORIES)
+            self.assertNotIn(t["id"], seen_ids, f"Repetition detected for {t['id']}!")
+            seen_ids.add(t["id"])
+
+        # Also test sequential rerolls for the same user
+        reroll_seen = set()
+        single_user = "persistent-tester"
+        for i in range(8):
+            t = challenge_manager.get_unique_target_challenge(participant_id=single_user, exclude_ids=list(reroll_seen))
+            self.assertNotIn(t["id"], reroll_seen, f"Reroll repetition detected: {t['id']}")
+            reroll_seen.add(t["id"])
+
+    def test_cloudflare_worker_generator_binary_and_json(self):
+        # Verify raw binary JPEG response from saurav-z/free-image-generation-api worker.js
+        sample_bytes = _make_sample_jpeg_bytes()
+        sample_b64 = base64.b64encode(sample_bytes).decode("utf-8")
+
+        mock_bin_resp = MagicMock()
+        mock_bin_resp.status_code = 200
+        mock_bin_resp.headers = {"Content-Type": "image/jpeg"}
+        mock_bin_resp.content = sample_bytes
+
+        exact_prompt = "A bright red Ferrari parked inside a white showroom with dark shadows"
+        worker_url = "https://my-img-worker.example.workers.dev"
+        worker_key = "super-secret-worker-key"
+
+        with patch("image_generator.requests.post", return_value=mock_bin_resp) as mock_post, \
+             patch.object(image_generator, "_get_worker_config", return_value=(worker_url, worker_key)):
+            res = image_generator.generate(exact_prompt)
+
+        self.assertTrue(res["success"])
+        self.assertEqual(res["source"], "cloudflare-workers-ai")
+        self.assertEqual(res["image_data"], f"data:image/jpeg;base64,{sample_b64}")
+
+        # Rule 4: Verify exact unmodified prompt & Bearer auth sent to Cloudflare Worker
+        self.assertEqual(mock_post.call_args[0][0], worker_url)
+        self.assertEqual(mock_post.call_args[1]["headers"]["Authorization"], f"Bearer {worker_key}")
+        self.assertEqual(mock_post.call_args[1]["json"], {"prompt": exact_prompt})
+
+        # Verify JSON base64 response support (e.g. FLUX on Cloudflare Workers AI)
+        mock_json_resp = MagicMock()
+        mock_json_resp.status_code = 200
+        mock_json_resp.headers = {"Content-Type": "application/json"}
+        mock_json_resp.content = b'{"image":"..."}'
+        mock_json_resp.json.return_value = {
+            "image": sample_b64,
+            "model": "@cf/black-forest-labs/flux-1-schnell"
+        }
+
+        with patch("image_generator.requests.post", return_value=mock_json_resp), \
+             patch.object(image_generator, "_get_worker_config", return_value=(worker_url, worker_key)):
+            res_flux = image_generator.generate(exact_prompt)
+
+        self.assertTrue(res_flux["success"])
+        self.assertEqual(res_flux["source"], "cloudflare-flux")
+        self.assertEqual(res_flux["image_data"], f"data:image/jpeg;base64,{sample_b64}")
+
+        # Verify clean error when CF_WORKER_URL / CF_WORKER_API_KEY are missing
+        with patch.object(image_generator, "_get_worker_config", return_value=("", "")):
+            res_missing = image_generator.generate(exact_prompt)
+        self.assertFalse(res_missing["success"])
+        self.assertIn("CF_WORKER_URL", res_missing["error"])
+
+    def test_end_to_end_reverse_prompt_workflow(self):
+        # 1. User joins on Identifier page with Name & Email
         join_resp = self.client.post('/api/join', json={
-            'name': 'Aria Stark',
-            'email': 'aria@winterfell.edu'
+            'name': 'Sarah Connor',
+            'email': 'sarah@resistance.edu'
         })
         self.assertEqual(join_resp.status_code, 200)
         join_data = join_resp.get_json()
+        self.assertTrue(join_data['success'])
+        self.assertEqual(join_data['timer_duration'], 180)
         pid = join_data['participant']['id']
-        self.assertEqual(join_data['participant']['name'], 'Aria Stark')
-        self.assertEqual(join_data['participant']['email'], 'aria@winterfell.edu')
-        challenge = join_data['challenge']
-        self.assertIn('title', challenge)
-        self.assertIn('category', challenge)
+        target_challenge = join_data['target_challenge']
 
-        # 2. Re-roll challenge test
-        reroll_resp = self.client.post('/api/reroll-challenge', json={
-            'participant_id': pid
+        # Ensure target image is present
+        self.assertIn('image_data', target_challenge)
+        self.assertTrue(len(target_challenge['image_data']) > 100)
+
+        # Ensure hidden_prompt is NOT sent to client
+        self.assertNotIn('hidden_prompt', target_challenge)
+
+        # 2. Test Anti-Cheat Rejection via API (does not burn attempt on manual click)
+        cheat_resp = self.client.post('/api/generate', json={
+            'participant_id': pid,
+            'challenge_id': target_challenge['id'],
+            'prompt': 'generate a image like the one on screen please'
         })
-        self.assertEqual(reroll_resp.status_code, 200)
-        reroll_data = reroll_resp.get_json()
-        self.assertTrue(reroll_data['success'])
-        self.assertIn('challenge', reroll_data)
+        self.assertEqual(cheat_resp.status_code, 400)
+        cheat_data = cheat_resp.get_json()
+        self.assertTrue(cheat_data.get('is_cheating'))
 
-        # 3. Direct submit test
-        prompt = 'Autonomous biophilic learning pods surrounded by bioluminescent trees and quantum diagrams, cinematic 8k'
+        # 3. Test Valid Cloudflare Worker Generation & Dual-Image AI Evaluation (Single Shot)
+        valid_prompt = "A glowing futuristic research dome surrounded by crystalline spires and volumetric golden mist, 8k"
+        sample_bytes = _make_sample_jpeg_bytes()
+        mock_worker_resp = MagicMock()
+        mock_worker_resp.status_code = 200
+        mock_worker_resp.headers = {"Content-Type": "image/jpeg"}
+        mock_worker_resp.content = sample_bytes
+
+        with patch("image_generator.requests.post", return_value=mock_worker_resp), \
+             patch.object(image_generator, "_get_worker_config", return_value=("https://demo.workers.dev", "secret-key")):
+            gen_resp = self.client.post('/api/generate', json={
+                'participant_id': pid,
+                'challenge_id': target_challenge['id'],
+                'prompt': valid_prompt
+            })
+        self.assertEqual(gen_resp.status_code, 200)
+        gen_data = gen_resp.get_json()
+        self.assertTrue(gen_data['success'])
+        self.assertTrue(gen_data['locked'])
+        self.assertIsNotNone(gen_data.get('submission'))
+        gen_rec = gen_data['generation']
+        self.assertEqual(gen_rec.get('source'), 'cloudflare-workers-ai')
+        self.assertIsNotNone(gen_rec.get('image_data'))
+
+        # 3b. Enforce Single-Shot: Second generation attempt & reroll must be rejected with 403
+        second_gen = self.client.post('/api/generate', json={
+            'participant_id': pid,
+            'challenge_id': target_challenge['id'],
+            'prompt': 'A second unauthorized retry prompt'
+        })
+        self.assertEqual(second_gen.status_code, 403)
+        self.assertTrue(second_gen.get_json().get('already_generated'))
+
+        reroll_after = self.client.post('/api/target-challenge/new', json={'participant_id': pid})
+        self.assertEqual(reroll_after.status_code, 403)
+        self.assertTrue(reroll_after.get_json().get('already_generated'))
+
+        # Check AI Judge Dual-Image Scorecard
+        ev = gen_rec['evaluation']
+        self.assertIn('total_score', ev)
+        self.assertGreaterEqual(ev['total_score'], 0.0)
+        self.assertLessEqual(ev['total_score'], 100.0)
+        self.assertIn('visual_similarity', ev['breakdown'])
+        self.assertIn('subject_match', ev['breakdown'])
+        self.assertIn('style_match', ev['breakdown'])
+        self.assertIn('prompt_precision', ev['breakdown'])
+        self.assertIn('unbiased_critique', ev)
+
+        # 4. Submit Masterpiece (idempotent — returns already auto-saved submission without duplicate)
         sub_resp = self.client.post('/api/submit', json={
             'participant_id': pid,
-            'prompt': prompt,
-            'image_data': 'data:image/jpeg;base64,fakeimagebytes123'
+            'prompt': valid_prompt,
+            'image_data': gen_rec['image_data']
         })
         self.assertEqual(sub_resp.status_code, 200)
         sub_data = sub_resp.get_json()
         self.assertTrue(sub_data['success'])
-        sub_id = sub_data['submission']['id']
-        ai_score = sub_data['submission']['ai_score']
-        self.assertEqual(sub_data['submission']['player_name'], 'Aria Stark')
-        self.assertEqual(sub_data['submission']['player_email'], 'aria@winterfell.edu')
+        self.assertEqual(sub_data['submission']['id'], gen_data['submission']['id'])
+        self.assertEqual(sub_data['submission']['player_name'], 'Sarah Connor')
+        self.assertEqual(sub_data['submission']['player_email'], 'sarah@resistance.edu')
+        self.assertIsNotNone(sub_data['submission'].get('target_image'))
 
-        # 4. Community Vote
-        vote_resp = self.client.post('/api/vote', json={
-            'submission_id': sub_id,
-            'voter_id': 'other_voter_999'
-        })
-        self.assertEqual(vote_resp.status_code, 200)
-        vote_data = vote_resp.get_json()
-        self.assertEqual(vote_data['votes'], 1)
-        self.assertEqual(vote_data['total_score'], round(ai_score + 2.0, 1))
-
-        # 5. Leaderboard Check (stores score under name and email)
+        # 5. Leaderboard Check (exact single entry for this participant)
         lb_resp = self.client.get('/api/leaderboard')
         self.assertEqual(lb_resp.status_code, 200)
         lb_data = lb_resp.get_json()
-        self.assertGreaterEqual(len(lb_data['leaderboard']), 1)
-        first = lb_data['leaderboard'][0]
-        self.assertEqual(first['player_name'], 'Aria Stark')
-        self.assertEqual(first['player_email'], 'aria@winterfell.edu')
+        sarah_entries = [e for e in lb_data['leaderboard'] if e['participant_id'] == pid]
+        self.assertEqual(len(sarah_entries), 1)
+        top = sarah_entries[0]
+        self.assertEqual(top['player_name'], 'Sarah Connor')
+        self.assertEqual(top['player_email'], 'sarah@resistance.edu')
+        self.assertIn('target_image', top)
+        self.assertIn('image_data', top)
 
-    def test_consistent_evaluation_across_all_categories(self):
-        # Test evaluation calibration on all 8 categories
-        for cat in OFFICIAL_CATEGORIES:
-            ch = challenge_manager.get_active_challenges(category=cat)[0]
-            title = ch['title']
-            test_prompt = f"Visionary forward-thinking design for {title}, cinematic volumetric light, 8k render"
-            ev = ai_evaluator.evaluate_submission(test_prompt, ch, 'TestPlayer')
-            self.assertGreaterEqual(ev['total_score'], 40.0)
-            self.assertLessEqual(ev['total_score'], 100.0)
-            self.assertIn('thematic_relevance', ev['breakdown'])
-            self.assertIn('creativity_originality', ev['breakdown'])
-            self.assertIn('prompt_engineering', ev['breakdown'])
-            self.assertIn('future_impact', ev['breakdown'])
+    def test_timer_expiry_empty_prompt_locks_attempt(self):
+        join_resp = self.client.post('/api/join', json={
+            'name': 'Timeout Tester',
+            'email': 'timeout@test.edu'
+        })
+        pid = join_resp.get_json()['participant']['id']
 
-    def test_admin_and_challenge_management(self):
-        # 1. Auth check
+        exp_resp = self.client.post('/api/generate', json={
+            'participant_id': pid,
+            'prompt': '',
+            'auto_triggered': True
+        })
+        self.assertEqual(exp_resp.status_code, 400)
+        exp_data = exp_resp.get_json()
+        self.assertTrue(exp_data.get('time_expired_empty'))
+        self.assertTrue(exp_data.get('locked'))
+
+        # Subsequent manual attempt after timer expiry must be blocked with 403
+        retry_resp = self.client.post('/api/generate', json={
+            'participant_id': pid,
+            'prompt': 'Late prompt after timeout'
+        })
+        self.assertEqual(retry_resp.status_code, 403)
+        self.assertTrue(retry_resp.get_json().get('already_generated'))
+
+    def test_admin_authentication(self):
         auth_resp = self.client.post('/api/admin/auth', json={'admin_code': ADMIN_CODE})
         self.assertEqual(auth_resp.status_code, 200)
         self.assertTrue(auth_resp.get_json()['success'])
 
-        # 2. Add challenge
-        new_ch_resp = self.client.post('/api/challenges/add', json={
-            'category': 'Future of Education',
-            'title': 'Test Neural Library',
-            'brief': 'A test neural library in the clouds',
-            'visual_goals': 'Volumetric clouds and glowing crystals',
-            'inspiration_keywords': 'Hologram, Quantum Books',
-            'evaluation_focus': 'Education and AI',
-            'is_active': True
-        }, headers={'X-Admin-Code': ADMIN_CODE})
-        self.assertEqual(new_ch_resp.status_code, 200)
-        new_ch = new_ch_resp.get_json()['challenge']
-        ch_id = new_ch['id']
-
-        # 3. Toggle challenge active status
-        toggle_resp = self.client.post(f'/api/challenges/{ch_id}/toggle', json={'is_active': False}, headers={'X-Admin-Code': ADMIN_CODE})
-        self.assertEqual(toggle_resp.status_code, 200)
-
-        # 4. Delete challenge
-        del_resp = self.client.delete(f'/api/challenges/{ch_id}', headers={'X-Admin-Code': ADMIN_CODE})
-        self.assertEqual(del_resp.status_code, 200)
 
 if __name__ == '__main__':
     unittest.main()

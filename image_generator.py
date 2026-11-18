@@ -1,212 +1,296 @@
 """
-Image Generation Engine for BUILD THE FUTURE - AI Prompt Battle
-Multi-tier resilient generation:
-1. NVIDIA NIM API (FLUX.1-dev) via NVIDIA_API_KEY
-2. High-speed AI Generative Cloud (Pollinations AI) fallback
-3. Offline Procedural Futuristic Synth (Pillow) fallback
+Cloudflare Workers AI Image Generation Engine for BUILD THE FUTURE - AI Prompt Battle
+
+Integrates with a deployed Cloudflare Worker from:
+https://github.com/saurav-z/free-image-generation-api
+
+Sends the participant's typed prompt strictly as-is via:
+  POST <CF_WORKER_URL>
+  Authorization: Bearer <CF_WORKER_API_KEY>
+  Content-Type: application/json
+  Body: {"prompt": "<exact user prompt>"}
 """
 
 import os
-import re
-import io
 import time
 import base64
-import random
-import urllib.parse
 import requests
-from PIL import Image, ImageDraw, ImageFont
+from dotenv import load_dotenv, dotenv_values
+
+load_dotenv()
+
+PLACEHOLDER_URLS = {
+    "",
+    "your_worker_url",
+    "https://your-worker-name.your-subdomain.workers.dev",
+    "https://<your-worker-name>.<your-subdomain>.workers.dev",
+}
+PLACEHOLDER_KEYS = {
+    "",
+    "your_worker_api_key_here",
+    "your-secret-api-key",
+}
+
+
+def _detect_image_mime(raw_bytes: bytes, content_type_header: str = "") -> str:
+    if raw_bytes.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "image/png"
+    if raw_bytes.startswith(b"\xff\xd8\xff"):
+        return "image/jpeg"
+    if len(raw_bytes) >= 12 and raw_bytes[:4] == b"RIFF" and raw_bytes[8:12] == b"WEBP":
+        return "image/webp"
+    if content_type_header:
+        mime = content_type_header.split(";")[0].strip().lower()
+        if mime.startswith("image/"):
+            return mime
+    return "image/jpeg"
+
+
+def _detect_b64_mime(b64_str: str) -> str:
+    if b64_str.startswith("iVBOR"):
+        return "image/png"
+    if b64_str.startswith("UklGR"):
+        return "image/webp"
+    return "image/jpeg"
+
 
 class ImageGenerator:
     def __init__(self):
-        self.nvidia_api_key = os.getenv("NVIDIA_API_KEY")
-        self.nvidia_model = os.getenv("NVIDIA_MODEL", "black-forest-labs/flux.1-dev")
+        self.worker_url = (os.getenv("CF_WORKER_URL") or os.getenv("IMAGE_API_URL") or "").strip()
+        self.worker_api_key = (os.getenv("CF_WORKER_API_KEY") or os.getenv("IMAGE_API_KEY") or "").strip()
 
-    def generate(self, prompt: str, category: str = "", challenge_title: str = "") -> dict:
+    def _get_worker_config(self) -> tuple[str, str]:
+        """Reads Cloudflare Worker URL and API key dynamically so .env edits apply immediately."""
+        env_file_vals = dotenv_values(".env") if os.path.exists(".env") else {}
+
+        def _pick(*names: str, default: str = "") -> str:
+            for name in names:
+                val = (env_file_vals.get(name) or "").strip()
+                if val:
+                    return val
+            for name in names:
+                val = (os.getenv(name) or "").strip()
+                if val:
+                    return val
+            return default
+
+        url = _pick("CF_WORKER_URL", "IMAGE_API_URL", default=self.worker_url)
+        key = _pick("CF_WORKER_API_KEY", "IMAGE_API_KEY", default=self.worker_api_key)
+        return url, key
+
+    def generate(self, prompt: str, category: str = "", challenge_title: str = "", seed: int = None) -> dict:
         """
-        Generate image for the prompt with fallback cascades.
-        Returns: {
-            "success": bool,
-            "image_data": str (data URI),
-            "source": str ("nvidia", "pollinations", "procedural"),
-            "latency": float,
-            "error": str or None
-        }
+        Generates an image via the deployed Cloudflare Worker (saurav-z/free-image-generation-api).
+        Passes the user prompt strictly as it is without alterations.
         """
         start_time = time.time()
+        clean_prompt = (prompt or "").strip()
+        if not clean_prompt:
+            return {
+                "success": False,
+                "image_data": None,
+                "source": "cloudflare-workers-ai",
+                "quota_exceeded": False,
+                "error": "Prompt cannot be empty.",
+                "latency": 0.0,
+            }
 
-        # Tier 1: Try NVIDIA NIM API if key is present
-        if self.nvidia_api_key and self.nvidia_api_key.startswith("nvapi-"):
-            result = self._generate_nvidia(prompt)
-            if result.get("success"):
-                result["latency"] = round(time.time() - start_time, 2)
-                return result
-            print(f"[ImageGenerator] NVIDIA generation failed/skipped: {result.get('error')}. Cascading to Tier 2...")
+        worker_url, api_key = self._get_worker_config()
+        if not worker_url or worker_url.lower() in PLACEHOLDER_URLS:
+            return {
+                "success": False,
+                "image_data": None,
+                "source": "cloudflare-workers-ai",
+                "quota_exceeded": False,
+                "error": (
+                    "CF_WORKER_URL is not configured in .env. "
+                    "Deploy cloudflare-worker/worker.js on Cloudflare Workers and set CF_WORKER_URL and CF_WORKER_API_KEY in .env."
+                ),
+                "latency": round(time.time() - start_time, 2),
+            }
 
-        # Tier 2: Try Pollinations AI Cloud
-        pollinations_result = self._generate_pollinations(prompt, category)
-        if pollinations_result.get("success"):
-            pollinations_result["latency"] = round(time.time() - start_time, 2)
-            return pollinations_result
+        if not api_key or api_key.lower() in PLACEHOLDER_KEYS:
+            return {
+                "success": False,
+                "image_data": None,
+                "source": "cloudflare-workers-ai",
+                "quota_exceeded": False,
+                "error": (
+                    "CF_WORKER_API_KEY is not configured in .env. "
+                    "Set CF_WORKER_API_KEY in .env to match your Cloudflare Worker's API_KEY variable."
+                ),
+                "latency": round(time.time() - start_time, 2),
+            }
 
-        print(f"[ImageGenerator] Cloud fallback failed: {pollinations_result.get('error')}. Cascading to Tier 3 Procedural...")
+        result = self._generate_cloudflare_worker(clean_prompt, worker_url, api_key)
+        result["latency"] = round(time.time() - start_time, 2)
+        return result
 
-        # Tier 3: Standalone Procedural Futuristic Synthesizer
-        procedural_result = self._generate_procedural(prompt, category, challenge_title)
-        procedural_result["latency"] = round(time.time() - start_time, 2)
-        return procedural_result
+    def _generate_cloudflare_worker(self, prompt: str, worker_url: str, api_key: str) -> dict:
+        """
+        Calls the deployed free-image-generation-api Cloudflare Worker with the exact prompt as-is.
+        Supports both raw binary JPEG/PNG streams (SDXL) and JSON base64 responses (FLUX).
+        """
+        url = worker_url.strip()
+        if not url.startswith(("http://", "https://")):
+            url = f"https://{url}"
 
-    def _generate_nvidia(self, prompt: str) -> dict:
-        invoke_url = f"https://ai.api.nvidia.com/v1/genai/{self.nvidia_model}"
         headers = {
-            "Authorization": f"Bearer {self.nvidia_api_key}",
-            "Accept": "application/json",
+            "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
         }
         payload = {"prompt": prompt}
 
         try:
-            resp = requests.post(invoke_url, headers=headers, json=payload, timeout=12)
+            resp = requests.post(url, headers=headers, json=payload, timeout=45)
+
             if resp.status_code == 200:
-                data = resp.json()
-                img_b64 = None
-                if "artifacts" in data and len(data["artifacts"]) > 0:
-                    img_b64 = data["artifacts"][0].get("base64")
-                elif "data" in data and len(data["data"]) > 0:
-                    img_b64 = data["data"][0].get("b64_json") or data["data"][0].get("base64")
-                elif "b64_json" in data:
-                    img_b64 = data["b64_json"]
+                content_type = (resp.headers.get("Content-Type") or "").lower()
+                body_bytes = resp.content or b""
 
-                if img_b64:
-                    if not img_b64.startswith("data:"):
-                        img_b64 = f"data:image/jpeg;base64,{img_b64}"
+                # Handle JSON response (e.g. FLUX {"image": "<b64>"} or worker error)
+                if "application/json" in content_type or body_bytes.lstrip().startswith(b"{"):
+                    try:
+                        data = resp.json()
+                    except Exception:
+                        return {
+                            "success": False,
+                            "image_data": None,
+                            "source": "cloudflare-workers-ai",
+                            "quota_exceeded": False,
+                            "error": "Cloudflare Worker returned malformed JSON response.",
+                        }
+
+                    if data.get("error"):
+                        details = data.get("details")
+                        msg = f"{data['error']}: {details}" if details else str(data["error"])
+                        return {
+                            "success": False,
+                            "image_data": None,
+                            "source": "cloudflare-workers-ai",
+                            "quota_exceeded": False,
+                            "error": f"Cloudflare Worker error: {msg}",
+                        }
+
+                    b64_img = data.get("image") or data.get("image_data") or data.get("data")
+                    if isinstance(b64_img, str) and len(b64_img) > 50:
+                        if b64_img.startswith("data:image/"):
+                            image_uri = b64_img
+                        else:
+                            mime = _detect_b64_mime(b64_img)
+                            image_uri = f"data:{mime};base64,{b64_img}"
+                        model_tag = data.get("model", "")
+                        source_label = "cloudflare-flux" if "flux" in model_tag.lower() else "cloudflare-workers-ai"
+                        return {
+                            "success": True,
+                            "image_data": image_uri,
+                            "source": source_label,
+                            "quota_exceeded": False,
+                            "error": None,
+                        }
+
                     return {
-                        "success": True,
-                        "image_data": img_b64,
-                        "source": "nvidia-nim",
-                        "error": None
+                        "success": False,
+                        "image_data": None,
+                        "source": "cloudflare-workers-ai",
+                        "quota_exceeded": False,
+                        "error": "Cloudflare Worker returned JSON without image data.",
                     }
-            return {
-                "success": False,
-                "error": f"NVIDIA status {resp.status_code}: {resp.text[:120]}"
-            }
-        except requests.exceptions.Timeout:
-            return {"success": False, "error": "NVIDIA API timed out (25s)"}
-        except Exception as e:
-            return {"success": False, "error": str(e)}
 
-    def _generate_pollinations(self, prompt: str, category: str = "") -> dict:
-        try:
-            # Enhance prompt slightly for futuristic aesthetic
-            enhanced = f"{prompt}, futuristic aesthetic, cinematic lighting, 8k render, masterpiece"
-            encoded_prompt = urllib.parse.quote(enhanced[:250])
-            seed = random.randint(1000, 999999)
-            url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=768&height=768&nologo=true&seed={seed}"
+                # Standard raw binary image response from saurav-z/free-image-generation-api/worker.js
+                if len(body_bytes) < 100:
+                    return {
+                        "success": False,
+                        "image_data": None,
+                        "source": "cloudflare-workers-ai",
+                        "quota_exceeded": False,
+                        "error": "Cloudflare Worker returned an empty image payload.",
+                    }
 
-            resp = requests.get(url, timeout=9)
-            if resp.status_code == 200 and len(resp.content) > 1000:
-                b64 = base64.b64encode(resp.content).decode("utf-8")
-                mime = "image/jpeg" if resp.content.startswith(b'\xff\xd8') else "image/png"
+                mime = _detect_image_mime(body_bytes, content_type)
+                b64 = base64.b64encode(body_bytes).decode("utf-8")
                 return {
                     "success": True,
                     "image_data": f"data:{mime};base64,{b64}",
-                    "source": "pollinations-ai",
-                    "error": None
+                    "source": "cloudflare-workers-ai",
+                    "quota_exceeded": False,
+                    "error": None,
                 }
-            return {"success": False, "error": f"Pollinations returned status {resp.status_code}"}
-        except Exception as e:
-            return {"success": False, "error": f"Pollinations error: {str(e)}"}
 
-    def _generate_procedural(self, prompt: str, category: str = "", challenge_title: str = "") -> dict:
-        """Procedural futuristic canvas renderer when external networks are unavailable"""
-        try:
-            w, h = 768, 768
-            img = Image.new("RGB", (w, h), color=(10, 15, 30))
-            draw = ImageDraw.Draw(img)
+            # Error status handling
+            err_detail = resp.text[:300]
+            try:
+                err_json = resp.json()
+                err_part = err_json.get("error", "")
+                det_part = err_json.get("details", "")
+                if err_part or det_part:
+                    err_detail = f"{err_part} ({det_part})" if (err_part and det_part) else (err_part or det_part)
+            except Exception:
+                pass
 
-            # Choose color palette based on category
-            palette_map = {
-                "Future of Education": ((30, 80, 160), (120, 220, 255), (255, 180, 50)),
-                "Smart Cities and Sustainable Living": ((20, 100, 60), (70, 230, 150), (240, 250, 120)),
-                "Artificial Intelligence and Humanity": ((70, 30, 120), (200, 100, 255), (100, 230, 255)),
-                "Space Exploration and Future Civilizations": ((20, 15, 60), (255, 120, 70), (255, 230, 120)),
-                "Technology for Social Impact": ((100, 60, 20), (255, 170, 60), (80, 230, 200)),
-                "Future of Work": ((25, 45, 90), (100, 180, 255), (255, 210, 100)),
-                "Cloud-Powered Innovation": ((15, 50, 100), (0, 168, 255), (255, 153, 0)),
-                "Robotics and Automation": ((50, 50, 70), (255, 80, 80), (100, 220, 255)),
-            }
-            deep_col, bright_col, accent_col = palette_map.get(
-                category, ((25, 30, 70), (100, 200, 255), (255, 150, 50))
-            )
+            if resp.status_code in (401, 403):
+                return {
+                    "success": False,
+                    "image_data": None,
+                    "source": "cloudflare-workers-ai",
+                    "quota_exceeded": False,
+                    "auth_failed": True,
+                    "error": (
+                        f"Cloudflare Worker authentication failed ({resp.status_code}): {err_detail}. "
+                        "Verify CF_WORKER_API_KEY in .env matches the API_KEY variable in Cloudflare."
+                    ),
+                }
 
-            # Gradient background
-            for y in range(h):
-                ratio = y / h
-                r = int(10 + (deep_col[0] - 10) * ratio)
-                g = int(15 + (deep_col[1] - 15) * ratio)
-                b = int(25 + (deep_col[2] - 25) * ratio)
-                draw.line([(0, y), (w, y)], fill=(r, g, b))
+            if resp.status_code == 405:
+                return {
+                    "success": False,
+                    "image_data": None,
+                    "source": "cloudflare-workers-ai",
+                    "quota_exceeded": False,
+                    "error": (
+                        "Cloudflare Worker returned 405 Not Allowed. "
+                        "Ensure CF_WORKER_URL points to the root Worker URL (https://<name>.<subdomain>.workers.dev) with no extra path."
+                    ),
+                }
 
-            # Perspective Cyber Grid on bottom half
-            horizon_y = int(h * 0.55)
-            vp_x = w // 2
-            # Radiating grid lines
-            for i in range(-12, 13):
-                target_x = vp_x + i * 70
-                draw.line([(vp_x, horizon_y), (target_x, h)], fill=(bright_col[0]//3, bright_col[1]//3, bright_col[2]//3), width=1)
-            # Horizontal depth lines
-            for step in range(1, 16):
-                depth = (step / 16.0) ** 2.2
-                grid_y = int(horizon_y + depth * (h - horizon_y))
-                alpha = int(40 + 180 * depth)
-                draw.line([(0, grid_y), (w, grid_y)], fill=(bright_col[0]//2, bright_col[1]//2, bright_col[2]//2), width=1)
+            if resp.status_code == 429:
+                return {
+                    "success": False,
+                    "image_data": None,
+                    "source": "cloudflare-workers-ai",
+                    "quota_exceeded": True,
+                    "error": f"Cloudflare Workers AI rate/quota limit reached (429): {err_detail}",
+                }
 
-            # Horizon glow
-            draw.line([(0, horizon_y), (w, horizon_y)], fill=bright_col, width=2)
+            hint = ""
+            if "reading 'run'" in err_detail or "binding" in err_detail.lower():
+                hint = " Make sure you added the Workers AI binding named 'AI' in Worker Settings -> Bindings."
 
-            # Futuristic planetary orb / energy core
-            cx, cy, radius = w // 2, int(horizon_y * 0.7), 130
-            for r_step in range(radius, 0, -3):
-                p_ratio = r_step / radius
-                pr = int(accent_col[0] * (1 - p_ratio) + deep_col[0] * p_ratio)
-                pg = int(accent_col[1] * (1 - p_ratio) + deep_col[1] * p_ratio)
-                pb = int(accent_col[2] * (1 - p_ratio) + deep_col[2] * p_ratio)
-                draw.ellipse([cx - r_step, cy - r_step, cx + r_step, cy + r_step], fill=(pr, pg, pb))
-
-            # Orbital rings
-            draw.arc([cx - 190, cy - 60, cx + 190, cy + 60], start=0, end=360, fill=bright_col, width=2)
-            draw.arc([cx - 240, cy - 40, cx + 240, cy + 40], start=10, end=190, fill=accent_col, width=1)
-
-            # Starfield / data particles
-            random.seed(sum(ord(c) for c in prompt))
-            for _ in range(90):
-                sx = random.randint(20, w - 20)
-                sy = random.randint(20, horizon_y - 10)
-                sr = random.choice([1, 2, 3])
-                sc = random.choice([bright_col, accent_col, (240, 245, 255)])
-                draw.ellipse([sx - sr, sy - sr, sx + sr, sy + sr], fill=sc)
-
-            # Top branding banner overlay
-            draw.rectangle([20, 20, w - 20, 85], fill=(15, 20, 35), outline=bright_col, width=1)
-            draw.text((40, 32), "BUILD THE FUTURE", fill=accent_col)
-            draw.text((40, 52), f"CATEGORY: {category.upper() or 'INNOVATION'}", fill=(200, 220, 255))
-
-            # Prompt label on bottom
-            draw.rectangle([20, h - 85, w - 20, h - 20], fill=(15, 20, 35), outline=accent_col, width=1)
-            snippet = prompt if len(prompt) < 70 else prompt[:67] + "..."
-            draw.text((35, h - 70), f"PROMPT: \"{snippet}\"", fill=(255, 255, 255))
-            draw.text((35, h - 45), f"CHALLENGE: {challenge_title or 'Creative Challenge'}", fill=bright_col)
-
-            buf = io.BytesIO()
-            img.save(buf, format="JPEG", quality=88)
-            b64 = base64.b64encode(buf.getvalue()).decode("utf-8")
             return {
-                "success": True,
-                "image_data": f"data:image/jpeg;base64,{b64}",
-                "source": "procedural-synth",
-                "error": None
+                "success": False,
+                "image_data": None,
+                "source": "cloudflare-workers-ai",
+                "quota_exceeded": False,
+                "error": f"Cloudflare Worker error ({resp.status_code}): {err_detail}.{hint}",
             }
-        except Exception as e:
-            return {"success": False, "error": f"Procedural rendering error: {str(e)}"}
 
+        except requests.exceptions.Timeout:
+            return {
+                "success": False,
+                "image_data": None,
+                "source": "cloudflare-workers-ai",
+                "quota_exceeded": False,
+                "error": "Cloudflare Worker image generation timed out after 45s. Please try again.",
+            }
+        except requests.exceptions.RequestException as e:
+            return {
+                "success": False,
+                "image_data": None,
+                "source": "cloudflare-workers-ai",
+                "quota_exceeded": False,
+                "error": f"Could not reach Cloudflare Worker at {url}: {str(e)}",
+            }
+
+
+# Singleton instance
 image_generator = ImageGenerator()
-

@@ -39,10 +39,10 @@ Participants craft descriptive generative prompts, synthesize futuristic digital
   - **Prompt Engineering & Technical Quality** (25 pts)
   - **Visual & Future Impact / Builder Ethos** (25 pts)
   - **Total**: 100 points with consistent scoring standards across all categories.
-- **Multi-Tier Resilient Image Generation**:
-  - **Tier 1**: NVIDIA NIM API (`black-forest-labs/flux.1-dev`) using `NVIDIA_API_KEY`.
-  - **Tier 2**: High-speed Cloud Generative AI (Pollinations AI) fallback.
-  - **Tier 3**: Offline Procedural Futuristic Synth (Pillow) fallback for zero-downtime reliability.
+- **Cloudflare Workers AI Image Generation (`saurav-z/free-image-generation-api`)**:
+  - Uses a deployed Cloudflare Worker ([`cloudflare-worker/worker.js`](cloudflare-worker/worker.js)) backed by Cloudflare Workers AI (e.g., `@cf/stabilityai/stable-diffusion-xl-base-1.0`, `@cf/black-forest-labs/flux-1-schnell`).
+  - Passes participant prompts directly to the Worker as typed without modification.
+  - Dual-image visual judging continues using Google Gemini Vision (`GEMINI_API_KEY`).
 - **Admin Command Center**:
   - Add new challenges with category selection, vision brief, visual cues, and keywords.
   - Toggle challenges active/inactive in real time.
@@ -72,9 +72,13 @@ python -m venv .venv
 The `.env` file contains:
 
 ```env
-# NVIDIA NIM API (Flux.1-dev)
-NVIDIA_API_KEY=nvapi-your-key-here
-NVIDIA_MODEL=black-forest-labs/flux.1-dev
+# Cloudflare Workers AI Image Generation (https://github.com/saurav-z/free-image-generation-api)
+CF_WORKER_URL=https://your-worker-name.your-subdomain.workers.dev
+CF_WORKER_API_KEY=your-secret-api-key
+
+# Google Gemini API (Multimodal Vision Judge)
+GEMINI_API_KEY=your_gemini_api_key_here
+GEMINI_JUDGE_MODEL=gemini-flash-lite-latest
 
 # Admin Authentication Code
 ADMIN_CODE=builder2026
