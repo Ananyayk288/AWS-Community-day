@@ -197,6 +197,12 @@ document.addEventListener("DOMContentLoaded", () => {
       socket.on("state_update", (payload) => {
         applyLiveCompetitionState(payload);
       });
+      socket.on("phase_changed", (data) => {
+        applyLiveCompetitionState((data && data.state) ? data.state : data);
+      });
+      socket.on("competition_reset", () => {
+        handleCompetitionReset();
+      });
       socket.on("vote_update", () => {
         loadLeaderboard();
       });
@@ -209,6 +215,33 @@ document.addEventListener("DOMContentLoaded", () => {
     console.warn("[Socket.IO] Standard REST mode active:", err);
   }
 
+  function handleCompetitionReset() {
+    stopChallengeTimer();
+    state.participant = null;
+    state.hasGenerated = false;
+    state.currentChallenge = null;
+    state.timerRemaining = 180;
+    lastHandledPhase = "lobby";
+
+    try {
+      localStorage.removeItem("sbg_participant_id");
+      localStorage.removeItem("sbg_builder_name");
+      localStorage.removeItem("sbg_builder_email");
+    } catch (e) { }
+
+    unlockWorkspaceForNewSession();
+    if (promptInput) promptInput.value = "";
+    if (identifierNameInput) identifierNameInput.value = "";
+    if (identifierEmailInput) identifierEmailInput.value = "";
+
+    const userPill = document.getElementById("top-nav-user-pill");
+    if (userPill) userPill.classList.add("hidden");
+
+    showScreen("identifier");
+    loadLeaderboard();
+    showToast("Competition data has been reset by the host.", "info");
+  }
+
   function formatSecondsToHMS(seconds) {
     const s = Math.max(0, Math.floor(Number(seconds) || 0));
     const hrs = String(Math.floor(s / 3600)).padStart(2, "0");
@@ -217,45 +250,165 @@ document.addEventListener("DOMContentLoaded", () => {
     return `${hrs}:${mins}:${secs}`;
   }
 
+  function updateAdminPhaseButtons(currentPhase) {
+    const phase = currentPhase || (state.compState && state.compState.status) || "lobby";
+    document.querySelectorAll(".btn-phase-ctrl").forEach(btn => {
+      const bPhase = btn.dataset.phase;
+      if (bPhase === phase) {
+        btn.classList.remove("pq-btn-outline-pill");
+        btn.classList.add("pq-btn-orange-pill", "active-phase");
+      } else {
+        btn.classList.remove("pq-btn-orange-pill", "active-phase");
+        btn.classList.add("pq-btn-outline-pill");
+      }
+    });
+  }
+
+  let lastHandledPhase = null;
+
   function applyLiveCompetitionState(payload) {
     if (!payload) return;
+    const prevPhase = state.compState ? state.compState.status : null;
     state.compState = payload;
+    const currentPhase = payload.status || "lobby";
+
     if (typeof payload.time_remaining === "number") {
       state.timeRemaining = payload.time_remaining;
     }
 
-    const statusText = document.getElementById("nav-comp-status");
-    const subCountEl = document.getElementById("nav-submissions-count");
-    const homePhaseEl = document.getElementById("home-stat-phase");
-    const homeTimerEl = document.getElementById("home-stat-timer");
-    const homePlayersEl = document.getElementById("home-stat-players");
-    const homePlayersLabel = document.getElementById("home-stat-players-label");
+    // Keep Admin Phase Buttons visual state updated
+    updateAdminPhaseButtons(currentPhase);
 
-    if (statusText) {
-      statusText.textContent =
-        payload.status === "battle"
-          ? `Round ${payload.round_number || 1} Live`
-          : "Live Event";
-    }
+    // 1. Navigation Status & Pill
+    const statusText = document.getElementById("nav-comp-status");
+    const liveStatusPill = document.getElementById("live-status-pill");
+    const subCountEl = document.getElementById("nav-submissions-count");
+    const topLbBtn = document.getElementById("nav-leaderboard-btn");
+
     if (subCountEl && typeof payload.submission_count === "number") {
       subCountEl.textContent = payload.submission_count;
     }
-    if (homePhaseEl) {
-      const st = payload.status || "lobby";
-      homePhaseEl.textContent = st === "battle" ? "Battle Live" : "Live Now";
+
+    if (statusText) {
+      if (currentPhase === "battle") {
+        statusText.textContent = `Round ${payload.round_number || 1} Live`;
+      } else if (currentPhase === "showcase") {
+        statusText.textContent = "Showcase & Voting";
+      } else if (currentPhase === "leaderboard") {
+        statusText.textContent = "Final Standings";
+      } else {
+        statusText.textContent = "Lobby Open";
+      }
     }
-    if (homeTimerEl) {
-      homeTimerEl.textContent = formatSecondsToHMS(state.timeRemaining);
+
+    if (liveStatusPill) {
+      liveStatusPill.className = `pq-live-event-pill pill-phase-${currentPhase}`;
     }
-    if (homePlayersEl && typeof payload.participant_count === "number") {
-      if (payload.participant_count > 0) {
-        homePlayersEl.textContent = `${payload.participant_count} Online`;
-        if (homePlayersLabel) homePlayersLabel.textContent = "Builders Registered";
+
+    // 2. Identifier Screen Live Phase Banner & CTA Button Text
+    const phaseBanner = document.getElementById("live-phase-banner");
+    const phaseText = document.getElementById("live-phase-text");
+    const startBtn = document.getElementById("start-game-btn");
+
+    if (phaseBanner && phaseText) {
+      phaseBanner.className = `live-phase-banner phase-${currentPhase}`;
+      if (currentPhase === "battle") {
+        phaseText.textContent = "🔥 BATTLE ROUND IS LIVE! Complete your prompt before the timer expires!";
+        if (startBtn && !state.participant) {
+          const span = startBtn.querySelector("span");
+          if (span) span.textContent = "🚀 Join Live Battle Now";
+        }
+      } else if (currentPhase === "showcase") {
+        phaseText.textContent = "🌟 Showcase & Voting Phase is LIVE! Review submissions and vote with 👏!";
+        if (startBtn && !state.participant) {
+          const span = startBtn.querySelector("span");
+          if (span) span.textContent = "View Showcase & Vote";
+        }
+      } else if (currentPhase === "leaderboard") {
+        phaseText.textContent = "🏆 Final Standings Announced! Check out the Hall of Future Builders!";
+        if (startBtn && !state.participant) {
+          const span = startBtn.querySelector("span");
+          if (span) span.textContent = "View Final Standings";
+        }
+      } else {
+        phaseText.textContent = "🟢 Competition Lobby: Waiting for the host to start Battle Round.";
+        if (startBtn && !state.participant) {
+          const span = startBtn.querySelector("span");
+          if (span) span.textContent = "Launch Prompt Arena & Reveal Challenge";
+        }
+      }
+    }
+
+    // 3. Leaderboard Button Visibility
+    if (topLbBtn) {
+      if (currentPhase === "showcase" || currentPhase === "leaderboard" || state.isAdmin || (state.participant && state.hasGenerated)) {
+        topLbBtn.classList.remove("hidden");
+      } else {
+        topLbBtn.classList.add("hidden");
+      }
+    }
+
+    // 4. Live Player Experience reacting to Phase Changes
+    const phaseJustChanged = (prevPhase !== null && prevPhase !== currentPhase) || (lastHandledPhase !== currentPhase);
+
+    if (phaseJustChanged) {
+      lastHandledPhase = currentPhase;
+
+      if (currentPhase === "battle") {
+        // HOST STARTED BATTLE ROUND!
+        if (state.participant) {
+          const activeScreen = document.querySelector(".view-screen.active");
+          if (!activeScreen || activeScreen.id === "identifier-screen") {
+            showScreen("game");
+            startChallengeTimer(payload.time_remaining || state.timerDuration || 180);
+            playAudioTone("success");
+            showToast(`⚔️ Round ${payload.round_number || 1} has begun! 180s on the clock!`, "success");
+          } else if (activeScreen.id === "game-screen") {
+            if (!state.hasGenerated) {
+              startChallengeTimer(payload.time_remaining || 180);
+              showToast("⚔️ Battle round timer synchronized!", "info");
+            }
+          }
+        } else {
+          showToast("🔥 The Battle Round has started! Enter your alias to join!", "info");
+        }
+      } else if (currentPhase === "showcase") {
+        // HOST SWITCHED TO SHOWCASE & VOTING!
+        const activeScreen = document.querySelector(".view-screen.active");
+        if (activeScreen && activeScreen.id === "game-screen" && !state.hasGenerated) {
+          stopChallengeTimer();
+          lockWorkspaceAfterFinalize("⏰ Round Ended by Host", "ROUND OVER", "00:00");
+          showToast("⏰ Battle round ended! Switching to Showcase & Voting...", "warning");
+          setTimeout(() => {
+            showScreen("leaderboard");
+            loadLeaderboard();
+          }, 1200);
+        } else if (activeScreen && (activeScreen.id === "results-screen" || activeScreen.id === "identifier-screen")) {
+          showToast("🌟 Showcase & Voting is now LIVE! Cast your applause votes!", "info");
+        }
+        loadLeaderboard();
+      } else if (currentPhase === "leaderboard") {
+        // HOST REVEALED FINAL STANDINGS!
+        stopChallengeTimer();
+        showScreen("leaderboard");
+        loadLeaderboard();
+        playAudioTone("success");
+        showToast("🏆 Final Standings Announced! Check out the Hall of Future Builders!", "success");
+      } else if (currentPhase === "lobby") {
+        // HOST RETURNED TO LOBBY
+        if (prevPhase === "battle" || prevPhase === "showcase" || prevPhase === "leaderboard") {
+          const activeScreen = document.querySelector(".view-screen.active");
+          if (activeScreen && activeScreen.id === "game-screen" && !state.hasGenerated) {
+            stopChallengeTimer();
+            showScreen("identifier");
+            showToast("Host returned competition to Lobby Mode.", "info");
+          }
+        }
       }
     }
   }
 
-  // Smooth 1-second timer tick for the Home Stat Card #4
+  // Smooth 1-second timer tick for active battle
   setInterval(() => {
     if (state.compState && state.compState.status === "battle" && state.timeRemaining > 0) {
       state.timeRemaining -= 1;
@@ -273,6 +426,9 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     } catch (e) { }
   }
+
+  // Automatic real-time polling every 2.5 seconds (resilient fallback for live sync)
+  setInterval(refreshCompetitionState, 2500);
 
   // Update Home Progress Circular Ring & Profile Screen
   function updateDashboardProgressRing(scoreValue, tierTitle) {
@@ -529,6 +685,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const name = identifierNameInput ? identifierNameInput.value.trim() : "";
     const email = identifierEmailInput ? identifierEmailInput.value.trim().toLowerCase() : "";
+    const currentPhase = state.compState ? state.compState.status : "lobby";
+
+    if (!name && !email && (currentPhase === "showcase" || currentPhase === "leaderboard")) {
+      showScreen("leaderboard");
+      loadLeaderboard();
+      return;
+    }
 
     if (!name) {
       showIdentifierError("Please enter your builder alias or full name.");
@@ -1819,10 +1982,25 @@ document.addEventListener("DOMContentLoaded", () => {
   const adminAuthPanel = document.getElementById("admin-auth-panel");
   const adminDashPanel = document.getElementById("admin-dashboard-panel");
 
+  // Restore persistent admin session if available
+  try {
+    const savedAdminToken = sessionStorage.getItem("sbg_admin_token");
+    if (savedAdminToken) {
+      state.adminToken = savedAdminToken;
+      state.isAdmin = true;
+      if (adminAuthPanel) adminAuthPanel.classList.add("hidden");
+      if (adminDashPanel) adminDashPanel.classList.remove("hidden");
+      if (adminAuthError) adminAuthError.classList.add("hidden");
+    }
+  } catch (e) { }
+
   if (openAdminBtn) {
     openAdminBtn.addEventListener("click", () => {
       adminModal.classList.remove("hidden");
-      if (state.isAdmin) loadAdminChallenges();
+      if (state.isAdmin) {
+        loadAdminChallenges();
+        updateAdminPhaseButtons();
+      }
     });
   }
 
@@ -1860,12 +2038,16 @@ document.addEventListener("DOMContentLoaded", () => {
         if (data.success) {
           state.isAdmin = true;
           state.adminToken = code;
+          try {
+            sessionStorage.setItem("sbg_admin_token", code);
+          } catch (e) { }
           if (adminAuthPanel) adminAuthPanel.classList.add("hidden");
           if (adminDashPanel) adminDashPanel.classList.remove("hidden");
           if (adminAuthError) adminAuthError.classList.add("hidden");
           playAudioTone("success");
           loadAdminChallenges();
           loadLeaderboard();
+          updateAdminPhaseButtons();
         } else {
           if (adminAuthError) adminAuthError.classList.remove("hidden");
         }
@@ -1881,15 +2063,31 @@ document.addEventListener("DOMContentLoaded", () => {
       document.querySelectorAll(".modal-tab-content").forEach(c => c.classList.remove("active"));
       btn.classList.add("active");
       const target = document.getElementById(btn.dataset.tab);
-      if (target) target.classList.add("active");
+      if (target) {
+        target.classList.add("active");
+        if (btn.dataset.tab === "tab-competition") {
+          updateAdminPhaseButtons();
+        }
+      }
     });
   });
 
   document.querySelectorAll(".btn-phase-ctrl").forEach(btn => {
     btn.addEventListener("click", async () => {
       const phase = btn.dataset.phase;
-      if (!phase || !state.adminToken) return;
+      if (!phase) return;
+
+      if (!state.adminToken) {
+        showToast("Admin authorization required. Please authenticate in the admin panel first.", "warning");
+        if (adminAuthPanel) adminAuthPanel.classList.remove("hidden");
+        if (adminDashPanel) adminDashPanel.classList.add("hidden");
+        if (adminCodeInput) adminCodeInput.focus();
+        return;
+      }
+
       playAudioTone("click");
+      updateAdminPhaseButtons(phase);
+
       try {
         const resp = await fetch("/api/admin/phase", {
           method: "POST",
@@ -1902,9 +2100,19 @@ document.addEventListener("DOMContentLoaded", () => {
         const data = await resp.json();
         if (data.success) {
           applyLiveCompetitionState(data.state);
-          showToast(`Competition phase switched to: ${phase.toUpperCase()}`, "success");
+          updateAdminPhaseButtons(phase);
+          const phaseNames = {
+            lobby: "LOBBY MODE",
+            battle: "BATTLE ROUND",
+            showcase: "SHOWCASE & VOTING",
+            leaderboard: "FINAL STANDINGS"
+          };
+          showToast(`Competition phase live switched to: ${phaseNames[phase] || phase.toUpperCase()}`, "success");
+        } else {
+          showToast(data.error || "Unable to switch competition phase.", "error");
         }
       } catch (e) {
+        console.error("Phase switch error:", e);
         showToast("Error updating competition phase.", "error");
       }
     });
@@ -2061,17 +2269,30 @@ document.addEventListener("DOMContentLoaded", () => {
   const resetCompBtn = document.getElementById("reset-comp-btn");
   if (resetCompBtn) {
     resetCompBtn.addEventListener("click", async () => {
+      if (!state.adminToken) {
+        showToast("Admin authorization required. Please authenticate first.", "warning");
+        return;
+      }
       if (confirm("DANGER: Reset all participants, generations, and locked-in submissions?")) {
         playAudioTone("click");
-        await fetch("/api/admin/reset", {
-          method: "POST",
-          headers: { "X-Admin-Code": state.adminToken }
-        });
         try {
-          localStorage.clear();
-        } catch (e) { }
-        showToast("Competition data reset.", "info");
-        window.location.reload();
+          const resp = await fetch("/api/admin/reset", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-Admin-Code": state.adminToken
+            }
+          });
+          const data = await resp.json();
+          if (data.success) {
+            handleCompetitionReset();
+            showToast("Competition data reset complete.", "info");
+          } else {
+            showToast(data.error || "Reset failed.", "error");
+          }
+        } catch (e) {
+          showToast("Network error resetting competition.", "error");
+        }
       }
     });
   }

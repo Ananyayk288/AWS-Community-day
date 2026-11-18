@@ -261,6 +261,57 @@ class TestReversePromptBattle(unittest.TestCase):
         self.assertEqual(auth_resp.status_code, 200)
         self.assertTrue(auth_resp.get_json()['success'])
 
+    def test_competition_phase_transitions(self):
+        # 1. Switch to battle phase
+        battle_resp = self.client.post(
+            '/api/admin/phase',
+            headers={'X-Admin-Code': ADMIN_CODE},
+            json={'phase': 'battle', 'duration': 180}
+        )
+        self.assertEqual(battle_resp.status_code, 200)
+        self.assertTrue(battle_resp.get_json()['success'])
+        self.assertEqual(battle_resp.get_json()['state']['status'], 'battle')
+
+        # Verify state endpoint
+        state_resp = self.client.get('/api/state')
+        self.assertEqual(state_resp.status_code, 200)
+        self.assertEqual(state_resp.get_json()['status'], 'battle')
+
+        # 2. Switch to showcase phase
+        showcase_resp = self.client.post(
+            '/api/admin/phase',
+            headers={'X-Admin-Code': ADMIN_CODE},
+            json={'phase': 'showcase'}
+        )
+        self.assertEqual(showcase_resp.status_code, 200)
+        self.assertEqual(showcase_resp.get_json()['state']['status'], 'showcase')
+
+        # 3. Switch to leaderboard phase
+        lb_resp = self.client.post(
+            '/api/admin/phase',
+            headers={'X-Admin-Code': ADMIN_CODE},
+            json={'phase': 'leaderboard'}
+        )
+        self.assertEqual(lb_resp.status_code, 200)
+        self.assertEqual(lb_resp.get_json()['state']['status'], 'leaderboard')
+
+        # 4. Switch back to lobby phase
+        lobby_resp = self.client.post(
+            '/api/admin/phase',
+            headers={'X-Admin-Code': ADMIN_CODE},
+            json={'phase': 'lobby'}
+        )
+        self.assertEqual(lobby_resp.status_code, 200)
+        self.assertEqual(lobby_resp.get_json()['state']['status'], 'lobby')
+
+        # 5. Reset competition
+        reset_resp = self.client.post(
+            '/api/admin/reset',
+            headers={'X-Admin-Code': ADMIN_CODE}
+        )
+        self.assertEqual(reset_resp.status_code, 200)
+        self.assertTrue(reset_resp.get_json()['success'])
+
 
 if __name__ == '__main__':
     unittest.main()

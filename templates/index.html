@@ -147,6 +147,12 @@
             </div>
           </div>
 
+          <!-- Live Competition Phase Banner for Players -->
+          <div id="live-phase-banner" class="live-phase-banner phase-lobby">
+            <span class="phase-indicator-dot">●</span>
+            <span id="live-phase-text">Lobby Open — Waiting for the host to start Battle Round.</span>
+          </div>
+
           <!-- 2. CENTERED ARENA BUILDER LOGIN CARD -->
           <div class="pq-registration-section pq-login-centered" id="registration-card-dock">
             <div class="pq-dash-card identifier-card pq-login-card-center">
@@ -755,9 +761,9 @@
             <div class="admin-panel-card">
               <h4>Competition Phase Control</h4>
               <p>Switch active competition phase and round timer for all connected players:</p>
-              <div class="phase-btn-group">
+              <div class="phase-btn-group" id="admin-phase-btn-group">
                 <button type="button" class="pq-btn-outline-pill btn-phase-ctrl" data-phase="lobby">Lobby Mode</button>
-                <button type="button" class="pq-btn-orange-pill btn-phase-ctrl" data-phase="battle">Start Battle Round</button>
+                <button type="button" class="pq-btn-outline-pill btn-phase-ctrl" data-phase="battle">Start Battle Round</button>
                 <button type="button" class="pq-btn-outline-pill btn-phase-ctrl" data-phase="showcase">Showcase &amp; Voting</button>
                 <button type="button" class="pq-btn-outline-pill btn-phase-ctrl" data-phase="leaderboard">Final Standings</button>
               </div>

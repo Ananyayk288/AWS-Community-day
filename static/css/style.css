@@ -2803,8 +2803,128 @@ button:disabled {
 .phase-btn-group {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 10px;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.btn-phase-ctrl {
+  cursor: pointer;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 18px;
+  border-radius: var(--radius-pill);
+  letter-spacing: 0.02em;
+}
+
+.btn-phase-ctrl:hover {
+  transform: translateY(-1px);
+}
+
+.btn-phase-ctrl.active-phase {
+  background: linear-gradient(135deg, #a78bfa 0%, #818cf8 100%) !important;
+  color: #0d071c !important;
+  font-weight: 800 !important;
+  border-color: rgba(255, 255, 255, 0.4) !important;
+  box-shadow: 0 0 18px rgba(167, 139, 250, 0.55), 0 2px 8px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* Player Live Phase Banner */
+.live-phase-banner {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  max-width: 580px;
+  width: 90%;
+  margin: 0 auto 20px auto;
+  padding: 10px 20px;
+  border-radius: var(--radius-pill);
+  font-size: 13.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+}
+
+.live-phase-banner .phase-indicator-dot {
+  font-size: 12px;
+  animation: phase-dot-pulse 1.8s infinite ease-in-out;
+}
+
+@keyframes phase-dot-pulse {
+  0%, 100% { opacity: 0.7; transform: scale(0.92); }
+  50% { opacity: 1; transform: scale(1.15); }
+}
+
+.live-phase-banner.phase-lobby {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.35);
+  color: #34d399;
+}
+.live-phase-banner.phase-lobby .phase-indicator-dot {
+  color: #10b981;
+}
+
+.live-phase-banner.phase-battle {
+  background: rgba(245, 158, 11, 0.16);
+  border-color: rgba(245, 158, 11, 0.55);
+  color: #fbbf24;
+  box-shadow: 0 0 24px rgba(245, 158, 11, 0.28);
+}
+.live-phase-banner.phase-battle .phase-indicator-dot {
+  color: #f59e0b;
+}
+
+.live-phase-banner.phase-showcase {
+  background: rgba(167, 139, 250, 0.16);
+  border-color: rgba(167, 139, 250, 0.45);
+  color: #c4b5fd;
+  box-shadow: 0 0 24px rgba(167, 139, 250, 0.25);
+}
+.live-phase-banner.phase-showcase .phase-indicator-dot {
+  color: #a78bfa;
+}
+
+.live-phase-banner.phase-leaderboard {
+  background: rgba(234, 179, 8, 0.16);
+  border-color: rgba(234, 179, 8, 0.5);
+  color: #facc15;
+  box-shadow: 0 0 24px rgba(234, 179, 8, 0.3);
+}
+.live-phase-banner.phase-leaderboard .phase-indicator-dot {
+  color: #eab308;
+}
+
+/* Dynamic Live Event Pill styles */
+.pq-live-event-pill.pill-phase-battle {
+  border-color: rgba(245, 158, 11, 0.55);
+  box-shadow: 0 0 14px rgba(245, 158, 11, 0.35);
+}
+.pq-live-event-pill.pill-phase-battle .pq-green-dot {
+  background: #f59e0b;
+  box-shadow: 0 0 8px #f59e0b;
+}
+
+.pq-live-event-pill.pill-phase-showcase {
+  border-color: rgba(167, 139, 250, 0.5);
+  box-shadow: 0 0 14px rgba(167, 139, 250, 0.3);
+}
+.pq-live-event-pill.pill-phase-showcase .pq-green-dot {
+  background: #a78bfa;
+  box-shadow: 0 0 8px #a78bfa;
+}
+
+.pq-live-event-pill.pill-phase-leaderboard {
+  border-color: rgba(234, 179, 8, 0.55);
+  box-shadow: 0 0 14px rgba(234, 179, 8, 0.35);
+}
+.pq-live-event-pill.pill-phase-leaderboard .pq-green-dot {
+  background: #eab308;
+  box-shadow: 0 0 8px #eab308;
 }
 
 .awsui-btn-danger {

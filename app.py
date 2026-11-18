@@ -687,12 +687,20 @@ def set_competition_phase():
         competition_state["round_duration"] = int(duration) if duration else ROUND_DURATION
         competition_state["round_start_time"] = time.time()
         competition_state["round_end_time"] = competition_state["round_start_time"] + competition_state["round_duration"]
-    elif new_phase == "lobby":
+    else:
         competition_state["round_start_time"] = None
         competition_state["round_end_time"] = None
 
+    state_payload = {
+        **competition_state,
+        "time_remaining": get_time_remaining(),
+        "participant_count": len(participants),
+        "submission_count": len(submissions)
+    }
+
     broadcast_state()
-    return jsonify({"success": True, "state": competition_state})
+    socketio.emit("phase_changed", {"phase": new_phase, "state": state_payload})
+    return jsonify({"success": True, "state": state_payload})
 
 @app.route("/api/admin/reset", methods=["POST"])
 def reset_competition():
@@ -709,7 +717,7 @@ def reset_competition():
     competition_state["round_number"] = 1
 
     broadcast_state()
-    socketio.emit("competition_reset", {})
+    socketio.emit("competition_reset", {"message": "Competition has been reset by administrator"})
     return jsonify({"success": True, "message": "Competition reset complete"})
 
 # -----------------------------------------------------------------------------
