@@ -3,514 +3,968 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BUILD THE FUTURE | AWS Student Builder Groups - AI Prompt Battle</title>
-  
-  <!-- AWS Builder Typography: Inter & JetBrains Mono -->
+  <title>Prompt Quest | AWS Community Day — AI Prompt Engineering Challenge</title>
+  <link rel="icon" type="image/png" href="/static/images/aws-logo.png?v=refined2">
+
+  <!-- Typography: Plus Jakarta Sans, Inter & JetBrains Mono -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/css/style.css">
-  
-  <!-- Socket.IO Client: Local Flask-SocketIO endpoint with CDN fallback -->
-  <script src="/socket.io/socket.io.js"></script>
-  <script>
-    if (typeof io === 'undefined') {
-      document.write('<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"><\/script>');
-    }
-  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:ital,wght@0,600;0,700;0,800;1,700;1,800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/style.css?v=refined2">
+
+  <!-- Socket.IO Client -->
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 </head>
-<body class="awsui-visual-refresh">
+<body class="pq-dark-theme intro-active">
 
   <!-- =====================================================================
-       TOP NAVIGATION BAR (Clean AWS Builder Center Header)
+       OPENING AWS LOGO STAGE & FLIP ANIMATION OVERLAY
+       Starts centered on dark futuristic stage, then glides to top-left sidebar
        ===================================================================== -->
-  <header class="awsui-top-navigation">
-    <div class="awsui-nav-inner">
-      
-      <!-- Brand & Community Identity -->
-      <div class="awsui-brand-block">
-        <svg class="awsui-builder-logo-svg" viewBox="0 0 32 32" fill="none">
-          <rect x="2" y="2" width="12" height="12" rx="2" fill="#AD5CFF"/>
-          <rect x="18" y="2" width="12" height="12" rx="2" fill="#EC7211"/>
-          <rect x="2" y="18" width="12" height="12" rx="2" fill="#0073BB"/>
-          <rect x="18" y="18" width="12" height="12" rx="2" fill="#161D26"/>
-        </svg>
-        <div class="awsui-brand-text">
-          <span class="awsui-center-title">AWS Builder Center</span>
-          <span class="awsui-community-crumb">Community &gt; <strong>Student Builder Groups</strong></span>
-        </div>
-      </div>
-
-      <!-- Right Utility Bar -->
-      <div class="awsui-nav-utilities">
-        
-        <!-- Builder Profile Badge (Revealed once identified) -->
-        <div class="awsui-user-profile-pill hidden" id="top-nav-user-pill">
-          <span class="user-avatar-circle" id="user-avatar-initials">SB</span>
-          <div class="user-profile-meta">
-            <span class="user-handle-text" id="top-nav-user-name">Builder</span>
-            <span class="user-email-text" id="top-nav-user-email">email@domain.com</span>
-          </div>
-          <button class="btn-change-user" id="change-user-btn" title="Sign out / switch builder">Switch</button>
-        </div>
-
-        <!-- Leaderboard Link -->
-        <button class="awsui-tab-link" id="nav-leaderboard-btn">
-          <span>🏆 Leaderboard</span>
-        </button>
-
-        <!-- Admin Access -->
-        <button class="awsui-button-subtle" id="open-admin-btn">
-          <span>⚙️ Admin</span>
-        </button>
-
-      </div>
-
+  <div id="aws-intro-stage" class="aws-intro-stage" aria-hidden="true">
+    <div id="aws-intro-backdrop" class="aws-intro-backdrop">
+      <div class="intro-radial-glow"></div>
     </div>
-  </header>
+
+    <!-- Single Flying Logo Element (Animated via precision FLIP to #navbar-logo-slot) -->
+    <div id="aws-flying-logo" class="aws-flying-logo">
+      <img src="/static/images/aws-logo.png?v=refined2" alt="AWS Logo" class="aws-flying-logo-img" draggable="false">
+    </div>
+
+    <!-- Intro Stage Subtitle -->
+    <div id="aws-intro-meta" class="aws-intro-meta">
+      <div class="intro-accent-line"></div>
+      <p class="intro-event-kicker">PROMPT QUEST • AWS AI GAMING ARENA</p>
+      <p class="intro-event-motto">THINK. PROMPT. WIN. — BUILD THE FUTURE</p>
+    </div>
+  </div>
 
   <!-- Toast Notification Center -->
-  <div id="toast-container" class="awsui-toast-container"></div>
+  <div id="toast-container" class="awsui-toast-container" role="status" aria-live="polite"></div>
 
   <!-- =====================================================================
-       MAIN VIEWPORT
+       PROMPT QUEST APPLICATION SHELL (Sidebar + Main Area)
        ===================================================================== -->
-  <main class="awsui-main-viewport">
+  <div class="pq-app-shell">
 
-    <!-- ================================================================= -->
-    <!-- SCREEN 1: IDENTIFIER PAGE (Name & Email Registration)             -->
-    <!-- ================================================================= -->
-    <section id="identifier-screen" class="view-screen active">
-      <div class="identifier-center-layout">
-        
-        <!-- Clean Centered Identifier Card -->
-        <div class="awsui-card identifier-card">
-          
-          <!-- Banner Graphic Ribbon -->
-          <div class="identifier-banner-ribbon">
-            <div class="ribbon-badge">
-              <span class="ribbon-icon">⚡</span>
-              <span>AWS STUDENT BUILDER GROUPS</span>
+    <!-- ===================================================================
+         LEFT VERTICAL SIDEBAR (Exact Reference Layout)
+         =================================================================== -->
+    <aside class="pq-sidebar" id="pq-sidebar">
+
+      <!-- Official AWS Logo Top Slot -->
+      <div class="pq-sidebar-brand" id="brand-home-trigger" role="button" tabindex="0" title="Prompt Quest Home">
+        <div class="navbar-logo-slot" id="navbar-logo-slot">
+          <img src="/static/images/aws-logo.png?v=refined2" alt="AWS" class="aws-nav-logo-img" id="aws-navbar-logo" draggable="false">
+        </div>
+      </div>
+
+      <!-- Sidebar Navigation Menu -->
+      <nav class="pq-sidebar-nav" aria-label="Main Navigation">
+        <button type="button" class="pq-nav-item nav-route-btn active" id="nav-home-btn" data-screen="identifier">
+          <span class="pq-nav-icon">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+              <path d="M12 3.2L3 10.5V20a1 1 0 001 1h5.5v-6h5v6H20a1 1 0 001-1v-9.5L12 3.2z"/>
+            </svg>
+          </span>
+          <span class="pq-nav-label">Home</span>
+        </button>
+
+        <button type="button" class="pq-nav-item nav-route-btn" id="nav-studio-btn" data-screen="game">
+          <span class="pq-nav-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+              <path d="M6 9H4.5a2.5 2.5 0 010-5H6M18 9h1.5a2.5 2.5 0 000-5H18M4 22h16M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22M18 2H6v7a6 6 0 0012 0V2z" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </span>
+          <span class="pq-nav-label">Play</span>
+        </button>
+
+        <button type="button" class="pq-nav-item nav-route-btn" id="nav-leaderboard-btn" data-screen="leaderboard">
+          <span class="pq-nav-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+              <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </span>
+          <span class="pq-nav-label">Leaderboard</span>
+          <span class="pq-nav-badge" id="nav-submissions-count">0</span>
+        </button>
+
+        <button type="button" class="pq-nav-item nav-route-btn" id="nav-achievements-btn" data-screen="achievements">
+          <span class="pq-nav-icon">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+            </svg>
+          </span>
+          <span class="pq-nav-label">Achievements</span>
+        </button>
+
+        <button type="button" class="pq-nav-item nav-route-btn" id="nav-profile-btn" data-screen="profile">
+          <span class="pq-nav-icon">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+              <path d="M12 12c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm0 2c-3.33 0-10 1.67-10 5v3h20v-3c0-3.33-6.67-5-10-5z"/>
+            </svg>
+          </span>
+          <span class="pq-nav-label">Profile</span>
+        </button>
+
+        <button type="button" class="pq-nav-item" id="open-admin-btn">
+          <span class="pq-nav-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/>
+            </svg>
+          </span>
+          <span class="pq-nav-label">Settings</span>
+        </button>
+      </nav>
+
+      <!-- Bottom Sidebar Cloud Card (Exact Match to Screenshot in Lavender & Charcoal) -->
+      <div class="pq-sidebar-footer">
+        <div class="pq-sidebar-cloud-card">
+          <div class="pq-cloud-icon-badge">
+            <svg viewBox="0 0 48 32" fill="none" width="40" height="26">
+              <path d="M38.5 28H12.5C7.25 28 3 23.75 3 18.5C3 13.78 6.44 9.87 10.95 9.12C12.88 4.4 17.52 1 23 1C29.89 1 35.54 6.36 35.97 13.14C41.05 13.63 45 17.9 45 23.1C45 25.81 42.09 28 38.5 28Z" stroke="#B69AFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div class="pq-motto-stack">
+            <span>Think.</span>
+            <span>Prompt.</span>
+            <span class="motto-win">Win.</span>
+          </div>
+        </div>
+        <svg class="pq-sidebar-wave" viewBox="0 0 230 42" fill="none" preserveAspectRatio="none">
+          <path d="M0 38 Q95 28 230 2" stroke="#B69AFF" stroke-width="1.5" stroke-opacity="0.65" fill="none"/>
+          <path d="M0 41 Q115 32 230 12" stroke="#D8C8FF" stroke-width="0.75" stroke-opacity="0.28" fill="none"/>
+        </svg>
+      </div>
+
+    </aside>
+
+    <!-- ===================================================================
+         MAIN CONTENT COLUMN (Top Header Bar + Active View Screen)
+         =================================================================== -->
+    <div class="pq-main-column">
+
+      <!-- TOP HEADER BAR -->
+      <header class="pq-topbar">
+        <div class="pq-topbar-left">
+          <button type="button" class="pq-mobile-menu-btn" id="mobile-sidebar-toggle" aria-label="Toggle Navigation">
+            ☰
+          </button>
+          <span class="pq-sparkle-icon">✦</span>
+          <span class="pq-topbar-title">Prompt Quest</span>
+          <span class="pq-topbar-sub-pill">BUILD THE FUTURE</span>
+        </div>
+
+        <div class="pq-topbar-right">
+          <!-- Replay Opening Animation Button -->
+          <button type="button" class="pq-icon-btn" id="replay-intro-btn" title="Replay AWS Opening Animation">
+            <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3.5 10a6.5 6.5 0 111.9 4.6M3.5 15V10h5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+
+          <!-- Live Event Pill -->
+          <div class="pq-live-event-pill" id="live-status-pill">
+            <span class="pq-green-dot"></span>
+            <span id="nav-comp-status">Live Event</span>
+          </div>
+
+          <div class="pq-topbar-divider"></div>
+
+          <!-- Active Builder Profile Pill (When signed in) -->
+          <div class="pq-user-pill hidden" id="top-nav-user-pill">
+            <span class="pq-avatar-circle" id="user-avatar-initials">A</span>
+            <div class="pq-user-meta">
+              <span class="pq-user-name" id="top-nav-user-name">Builder</span>
+              <span class="pq-user-email" id="top-nav-user-email">email@domain.com</span>
+            </div>
+            <button type="button" class="pq-btn-switch" id="change-user-btn" title="Switch Builder">Switch</button>
+          </div>
+
+          <!-- Default Avatar Badge (When not yet identified, matches screenshot) -->
+          <button type="button" class="pq-default-avatar-btn" id="default-avatar-trigger" title="Builder Identification">
+            <span class="pq-avatar-circle">A</span>
+            <span class="pq-avatar-chevron">⌄</span>
+          </button>
+        </div>
+
+        <!-- Topbar Glowing Bottom Accent Line -->
+        <div class="pq-topbar-glow-line"></div>
+      </header>
+
+      <!-- =================================================================
+           MAIN VIEWPORT SCREENS
+           ================================================================= -->
+      <main class="awsui-main-viewport pq-viewport">
+
+        <!-- =============================================================== -->
+        <!-- SCREEN 1: HOME DASHBOARD (Exact Prompt Quest Reference Layout)  -->
+        <!-- =============================================================== -->
+        <section id="identifier-screen" class="view-screen active">
+
+          <!-- 1. HERO BANNER -->
+          <div class="pq-hero-banner">
+            <!-- Top-left angled lavender tech corner accent -->
+            <svg class="pq-hero-corner-line" viewBox="0 0 70 70" fill="none">
+              <path d="M2 52 L52 2 L70 2" stroke="#B69AFF" stroke-width="1.6" stroke-opacity="0.75"/>
+            </svg>
+
+            <div class="pq-hero-content">
+              <div class="pq-hero-title-wrap">
+                <!-- Orbital Lavender Swoosh Arc + Sparkle above "Quest" -->
+                <svg class="pq-quest-arc-svg" viewBox="0 0 260 58" fill="none">
+                  <path d="M8 46 C 72 8, 195 -4, 232 22 C 242 29, 224 44, 190 48" stroke="url(#arcGrad)" stroke-width="2.4" stroke-linecap="round" fill="none"/>
+                  <path d="M242 14 L245 22 L253 25 L245 28 L242 36 L239 28 L231 25 L239 22 Z" fill="#D8C8FF"/>
+                  <defs>
+                    <linearGradient id="arcGrad" x1="0" y1="0" x2="1" y2="0">
+                      <stop offset="0%" stop-color="#B69AFF" stop-opacity="0.1"/>
+                      <stop offset="55%" stop-color="#B69AFF" stop-opacity="0.95"/>
+                      <stop offset="100%" stop-color="#D8C8FF"/>
+                    </linearGradient>
+                  </defs>
+                </svg>
+
+                <h1 class="pq-hero-heading">
+                  <span class="pq-word-prompt">Prompt</span>
+                  <span class="pq-word-quest">Quest</span>
+                </h1>
+              </div>
+
+              <h2 class="pq-hero-sub-spaced">THINK. PROMPT. WIN.</h2>
+
+              <p class="pq-hero-desc">
+                Craft the smartest prompts, tackle exciting challenges<br>
+                and climb the leaderboard!
+              </p>
+
+              <div class="pq-hero-actions">
+                <button type="button" class="pq-btn-orange-pill" id="hero-enter-arena-btn">
+                  <span>Enter the Arena</span>
+                  <span class="btn-arrow">→</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Right Side 3D AI Robot Illustration -->
+            <div class="pq-hero-illustration">
+              <img src="/static/images/hero-robot.png?v=refined2" alt="Prompt Quest AI Robot" class="pq-hero-robot-img" draggable="false">
             </div>
           </div>
 
-          <!-- Official Required Theme Header -->
-          <div class="identifier-hero-text">
-            <h1 class="theme-hero-title">BUILD THE FUTURE</h1>
-            <h2 class="theme-hero-tagline">IMAGINE. INNOVATE. CREATE.</h2>
-            <p class="theme-hero-community">An AI-powered creative challenge at AWS Community Day.</p>
+          <!-- 2. FOUR HORIZONTAL STAT CARDS ROW -->
+          <div class="pq-stats-row">
+
+            <!-- Stat 1: Builders / Challenges -->
+            <div class="pq-stat-card">
+              <div class="pq-stat-icon">
+                <svg viewBox="0 0 32 32" fill="currentColor" width="32" height="32">
+                  <circle cx="16" cy="10" r="4.5"/>
+                  <circle cx="8" cy="13" r="3.2" opacity="0.75"/>
+                  <circle cx="24" cy="13" r="3.2" opacity="0.75"/>
+                  <path d="M9 25c0-3.8 3.1-6.5 7-6.5s7 2.7 7 6.5H9z"/>
+                  <path d="M2.5 25c0-2.8 2.2-5 5-5 .8 0 1.5.2 2.1.5-1.2 1.2-1.9 2.7-1.9 4.5H2.5z" opacity="0.7"/>
+                  <path d="M29.5 25h-5.2c0-1.8-.7-3.3-1.9-4.5.6-.3 1.3-.5 2.1-.5 2.8 0 5 2.2 5 5z" opacity="0.7"/>
+                </svg>
+              </div>
+              <div class="pq-stat-info">
+                <strong class="pq-stat-val" id="home-stat-players">16+</strong>
+                <span class="pq-stat-label" id="home-stat-players-label">Active Challenges</span>
+              </div>
+            </div>
+
+            <!-- Stat 2: Frontier Tracks / Submissions -->
+            <div class="pq-stat-card">
+              <div class="pq-stat-icon">
+                <svg viewBox="0 0 32 32" fill="currentColor" width="30" height="30">
+                  <path d="M24 6h-2V4H10v2H8C5.8 6 4 7.8 4 10v1c0 3.9 3 7.2 6.8 7.7.9 2 2.7 3.5 4.2 3.9V26h-4v2h10v-2h-4v-3.4c1.5-.4 3.3-1.9 4.2-3.9C25 18.2 28 14.9 28 11v-1c0-2.2-1.8-4-4-4zM6 11v-1c0-1.1.9-2 2-2h2v6.5C7.7 14 6 12.6 6 11zm20 0c0 1.6-1.7 3-4 3.5V8h2c1.1 0 2 .9 2 2v1z"/>
+                </svg>
+              </div>
+              <div class="pq-stat-info">
+                <strong class="pq-stat-val" id="home-stat-tracks">8 Tracks</strong>
+                <span class="pq-stat-label" id="home-stat-tracks-label">Frontier Categories</span>
+              </div>
+            </div>
+
+            <!-- Stat 3: Live Now -->
+            <div class="pq-stat-card">
+              <div class="pq-stat-icon">
+                <svg viewBox="0 0 32 32" fill="currentColor" width="30" height="30">
+                  <path d="M18 3L7 18h8l-2 11 12-15h-8l1-11z"/>
+                </svg>
+              </div>
+              <div class="pq-stat-info">
+                <strong class="pq-stat-val pq-live-inline">
+                  <span id="home-stat-phase">Live Now</span>
+                  <span class="pq-green-dot"></span>
+                </strong>
+                <span class="pq-stat-label">Event in Progress</span>
+              </div>
+            </div>
+
+            <!-- Stat 4: Time Left -->
+            <div class="pq-stat-card">
+              <div class="pq-stat-icon">
+                <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.4" width="30" height="30">
+                  <circle cx="16" cy="16" r="11"/>
+                  <path d="M16 10v6l4 2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <div class="pq-stat-info">
+                <strong class="pq-stat-val pq-mono-timer" id="home-stat-timer">00:05:00</strong>
+                <span class="pq-stat-label">Round Duration</span>
+              </div>
+            </div>
+
           </div>
 
-          <!-- Philosophy Callout -->
-          <div class="identifier-philosophy-strip">
-            <span class="strip-icon">💡</span>
-            <p>
-              Inspired by the <strong>AWS Student Builder Groups</strong> philosophy of empowering students to explore cloud technology, develop technical skills, collaborate, and build innovative solutions.
-            </p>
+          <!-- 3. THREE BOTTOM DASHBOARD CARDS ROW -->
+          <div class="pq-bottom-grid">
+
+            <!-- Card A: About the Game -->
+            <div class="pq-dash-card pq-about-card">
+              <div class="pq-about-left">
+                <div class="pq-card-heading-row">
+                  <span class="pq-slash">/</span>
+                  <h3>About the Game</h3>
+                </div>
+                <p class="pq-about-text">
+                  Put your prompting skills to the ultimate test in this AWS-powered challenge. Think creatively, be precise, and outsmart the competition!
+                </p>
+                <button type="button" class="pq-btn-outline-pill" id="about-learn-more-btn">
+                  <span>Learn More</span>
+                  <span>→</span>
+                </button>
+              </div>
+              <div class="pq-about-art">
+                <img src="/static/images/about-cloud.png?v=refined2" alt="AWS Cloud Platform" class="pq-about-cloud-img" draggable="false">
+              </div>
+            </div>
+
+            <!-- Card B: Top Players -->
+            <div class="pq-dash-card pq-top-players-card">
+              <div class="pq-card-heading-between">
+                <div class="pq-card-heading-row">
+                  <span class="pq-slash">/</span>
+                  <h3>Top Players</h3>
+                </div>
+                <button type="button" class="pq-link-view-all" id="home-view-all-lb-btn">
+                  <span>View All</span>
+                  <span>→</span>
+                </button>
+              </div>
+
+              <div class="pq-mini-lb-list" id="home-top-players-list">
+                <!-- Populated dynamically from /api/leaderboard or benchmark defaults -->
+              </div>
+            </div>
+
+            <!-- Card C: Your Progress -->
+            <div class="pq-dash-card pq-progress-card">
+              <div class="pq-card-heading-row">
+                <span class="pq-slash">/</span>
+                <h3>Your Progress</h3>
+              </div>
+
+              <div class="pq-progress-ring-wrap">
+                <svg class="pq-circular-chart" viewBox="0 0 120 120">
+                  <circle class="pq-circle-bg" cx="60" cy="60" r="46" />
+                  <circle class="pq-circle-fill" id="home-progress-circle" cx="60" cy="60" r="46" stroke-dasharray="289" stroke-dashoffset="92" />
+                </svg>
+                <div class="pq-ring-center-text">
+                  <strong id="home-progress-pct">68%</strong>
+                </div>
+              </div>
+
+              <div class="pq-progress-footer">
+                <div class="pq-level-title" id="home-progress-level">Level 3</div>
+                <div class="pq-rank-sub" id="home-progress-tier">
+                  <span class="pq-star">★</span>
+                  <span id="home-progress-badge-text">Prompt Master</span>
+                </div>
+              </div>
+            </div>
+
           </div>
 
-          <div class="identifier-divider"></div>
+          <!-- 4. ARENA BUILDER REGISTRATION DOCK (Revealed / Scrolled to on "Enter the Arena") -->
+          <div class="pq-registration-section" id="registration-card-dock">
+            <div class="pq-dash-card identifier-card">
 
-          <!-- The Registration Form -->
-          <form id="identifier-form" class="identifier-form">
-            
-            <div class="form-title-group">
-              <h3>Student Builder Identification</h3>
-              <p>Enter your details below to register your session and store your scores under your profile.</p>
+              <div class="pq-reg-grid">
+                <!-- Left Info -->
+                <div class="pq-reg-narrative">
+                  <div class="pq-card-heading-row">
+                    <span class="pq-slash">/</span>
+                    <h3>Arena Builder Registration</h3>
+                  </div>
+                  <p class="pq-reg-lead">
+                    <strong>BUILD THE FUTURE – Imagine. Innovate. Create.</strong><br>
+                    Inspired by the <strong>AWS Student Builder Groups</strong> philosophy. Enter your builder alias and email to unlock your randomized challenge across the 8 frontier categories.
+                  </p>
+                  <div class="pq-reg-highlights">
+                    <div class="pq-reg-chip">✦ 8 Frontier Categories</div>
+                    <div class="pq-reg-chip">✦ 4-Pillar AI Judge (100 Pts)</div>
+                    <div class="pq-reg-chip">✦ Multi-Tier Flux &amp; Cloud AI</div>
+                  </div>
+                </div>
+
+                <!-- Right Form (All original IDs preserved) -->
+                <form id="identifier-form" class="identifier-form" novalidate>
+
+                  <div class="awsui-form-group">
+                    <div class="label-row-flex">
+                      <label for="identifier-name" class="awsui-label">
+                        Builder Alias / Full Name <span class="required-star">*</span>
+                      </label>
+                      <button type="button" class="btn-quick-demo" id="quick-demo-fill-btn">
+                        ⚡ Auto-Fill Builder
+                      </button>
+                    </div>
+                    <input
+                      type="text"
+                      id="identifier-name"
+                      class="awsui-text-input"
+                      placeholder="e.g. CloudDreamer or Alex Morgan"
+                      maxlength="40"
+                      autocomplete="name"
+                    >
+                  </div>
+
+                  <div class="awsui-form-group">
+                    <label for="identifier-email" class="awsui-label">
+                      Email Address <span class="required-star">*</span>
+                      <span class="label-hint">(Stores your score on the leaderboard)</span>
+                    </label>
+                    <input
+                      type="email"
+                      id="identifier-email"
+                      class="awsui-text-input"
+                      placeholder="builder@university.edu"
+                      autocomplete="email"
+                    >
+                  </div>
+
+                  <div id="identifier-error" class="identifier-error-msg hidden" role="alert"></div>
+
+                  <div class="form-action-group">
+                    <button type="button" class="pq-btn-orange-pill full-width-btn" id="start-game-btn">
+                      <span>Launch Prompt Arena &amp; Reveal Challenge</span>
+                      <span class="btn-arrow">→</span>
+                    </button>
+                  </div>
+
+                </form>
+              </div>
+
+            </div>
+          </div>
+
+        </section>
+
+        <!-- =============================================================== -->
+        <!-- SCREEN 2: PLAY — PROMPT QUEST ARENA WORKBENCH                   -->
+        <!-- =============================================================== -->
+        <section id="game-screen" class="view-screen">
+          <div class="game-container-layout">
+
+            <!-- Top Status Strip -->
+            <div class="pq-dash-card game-header-strip">
+              <div class="builder-welcome-meta">
+                <span class="pq-green-dot"></span>
+                <span class="meta-label">PLAYER:</span>
+                <strong class="builder-display-name" id="game-builder-name">CloudBuilder</strong>
+                <span class="builder-display-email" id="game-builder-email">(builder@aws.dev)</span>
+              </div>
+
+              <div class="game-strip-actions">
+                <div class="game-theme-pill">
+                  <span>THEME: <strong>BUILD THE FUTURE — Imagine. Innovate. Create.</strong></span>
+                </div>
+                <button type="button" class="pq-btn-outline-pill btn-sm" id="studio-to-leaderboard-btn">
+                  <span>🏆 Standings</span>
+                </button>
+              </div>
             </div>
 
-            <!-- Name Input -->
-            <div class="awsui-form-group">
-              <label for="identifier-name" class="awsui-label">
-                Full Name / Builder Alias <span class="required-star">*</span>
-              </label>
-              <input 
-                type="text" 
-                id="identifier-name" 
-                class="awsui-text-input" 
-                placeholder="e.g. Alex Morgan or CloudPioneer" 
-                maxlength="40" 
-                autocomplete="name"
-                autofocus
-              >
+            <!-- Main Studio Grid -->
+            <div class="studio-two-col">
+
+              <!-- LEFT COLUMN: Challenge Brief & Target Reference Scene -->
+              <div class="studio-left-col">
+
+                <div class="pq-dash-card challenge-box" id="assigned-challenge-card">
+
+                  <div class="challenge-top-meta">
+                    <div class="category-tag-pill" id="player-cat-badge">
+                      <span class="cat-dot"></span>
+                      <span id="player-cat-name">Future of Education</span>
+                    </div>
+                    <button type="button" class="btn-reroll-challenge" id="reroll-challenge-btn" title="Re-roll for another randomized challenge">
+                      🔄 Re-roll Quest
+                    </button>
+                  </div>
+
+                  <!-- Challenge Title -->
+                  <h2 class="challenge-main-title" id="player-challenge-title">The Biosphere Hyper-Campus 2050</h2>
+
+                  <!-- Target Reference Visual Card -->
+                  <div class="reference-target-card">
+                    <div class="reference-target-header">
+                      <span class="reference-badge-pill">
+                        <span class="ref-dot"></span>
+                        <span>TARGET REFERENCE SCENE</span>
+                      </span>
+                      <button type="button" class="btn-inspect-ref" id="inspect-reference-btn">
+                        Inspect Reference ↗
+                      </button>
+                    </div>
+                    <div class="reference-visual-frame" id="reference-visual-frame">
+                      <img id="challenge-reference-img" class="challenge-reference-img" src="" alt="Challenge Reference Visual">
+                      <div class="reference-overlay-caption">
+                        <span>Study target composition &amp; lighting cues to craft your prompt</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Mission Brief -->
+                  <div class="mission-brief-block">
+                    <span class="block-subtitle">MISSION BRIEF</span>
+                    <p id="player-challenge-brief">Envision an open-air, nature-integrated university campus where AI holographic mentors and student pods harmonize with a living ecosystem.</p>
+                  </div>
+
+                  <!-- Visual Targets -->
+                  <div class="visual-targets-block">
+                    <span class="block-subtitle">TARGET VISUAL MOTIFS</span>
+                    <p id="player-visual-goals">Bioluminescent flora, floating interactive volumetric projections, solar-canopy glass pavilions.</p>
+                  </div>
+
+                  <!-- Inspiration Keywords -->
+                  <div class="keywords-block">
+                    <span class="block-subtitle">POWER-UP KEYWORDS (Click to inject)</span>
+                    <div class="chips-flex-row" id="player-keywords-container"></div>
+                  </div>
+
+                  <!-- 4-Pillar AI Rubric -->
+                  <div class="rubric-mini-box">
+                    <div class="rubric-header-row">
+                      <span>AI SCORING MATRIX (100 PTS)</span>
+                      <span class="std-badge">4 Pillars</span>
+                    </div>
+                    <div class="rubric-grid-2x2">
+                      <div class="rubric-pill-cell">
+                        <span class="cell-label">Relevance</span>
+                        <strong class="cell-pts">25 pts</strong>
+                      </div>
+                      <div class="rubric-pill-cell">
+                        <span class="cell-label">Creativity</span>
+                        <strong class="cell-pts">25 pts</strong>
+                      </div>
+                      <div class="rubric-pill-cell">
+                        <span class="cell-label">Prompt Craft</span>
+                        <strong class="cell-pts">25 pts</strong>
+                      </div>
+                      <div class="rubric-pill-cell">
+                        <span class="cell-label">Future Impact</span>
+                        <strong class="cell-pts">25 pts</strong>
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+
+                <!-- Session Generation History Reel -->
+                <div class="pq-dash-card history-reel-box">
+                  <div class="history-reel-header">
+                    <div class="pq-card-heading-row">
+                      <span class="pq-slash">/</span>
+                      <h5>Session Generations</h5>
+                    </div>
+                    <span class="history-count" id="history-count">0</span>
+                  </div>
+                  <div class="history-reel-scroll" id="history-reel-container">
+                    <p class="history-empty">No visuals synthesized yet. Craft your first prompt!</p>
+                  </div>
+                </div>
+
+              </div>
+
+              <!-- RIGHT COLUMN: Prompt Console + Viewport + AI Scorecard -->
+              <div class="studio-right-col">
+
+                <!-- Prompt Engineering Console -->
+                <div class="pq-dash-card prompt-card">
+                  <div class="prompt-header-row">
+                    <div class="pq-card-heading-row">
+                      <span class="pq-slash">/</span>
+                      <span class="prompt-title">Prompt Engineering Console</span>
+                    </div>
+                    <div class="prompt-metrics-right">
+                      <span class="prompt-quality-pill" id="prompt-quality-indicator">Readiness: Waiting</span>
+                      <span class="char-counter" id="char-counter">0 chars / 0 words</span>
+                    </div>
+                  </div>
+
+                  <!-- Quick Modifiers -->
+                  <div class="prompt-modifiers-row">
+                    <span class="mod-label">Boosters:</span>
+                    <button type="button" class="mod-pill-tag" data-insert=", cinematic volumetric lighting, atmospheric god rays">💡 Volumetric Light</button>
+                    <button type="button" class="mod-pill-tag" data-insert=", bioluminescent botanical accents, ambient glow">✨ Bioluminescence</button>
+                    <button type="button" class="mod-pill-tag" data-insert=", ultra-wide establishing shot, rule of thirds">📷 Ultra-Wide</button>
+                    <button type="button" class="mod-pill-tag" data-insert=", solarpunk clean architecture, lush nature">🌿 Solarpunk</button>
+                    <button type="button" class="mod-pill-tag" data-insert=", floating holographic telemetry interface">🔮 Holographic</button>
+                    <button type="button" class="mod-pill-tag" data-insert=", photorealistic 8k octane render, ray-traced">💎 8K Render</button>
+                  </div>
+
+                  <!-- Textarea -->
+                  <div class="prompt-input-box">
+                    <textarea
+                      id="prompt-input"
+                      class="awsui-textarea"
+                      rows="3"
+                      placeholder="Craft your descriptive prompt: specify architecture, materials, lighting physics, atmosphere, and camera composition..."
+                    ></textarea>
+                  </div>
+
+                  <!-- Actions -->
+                  <div class="prompt-actions-bar">
+                    <button type="button" class="pq-btn-outline-pill" id="clear-prompt-btn">Clear</button>
+                    <button type="button" class="pq-btn-orange-pill" id="generate-image-btn">
+                      <span>⚡ Synthesize &amp; Score</span>
+                    </button>
+                    <button type="button" class="pq-btn-gold-lock" id="submit-masterpiece-btn" disabled>
+                      <span>🏆 Submit to Leaderboard</span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Synthesis Viewport Card -->
+                <div class="pq-dash-card canvas-card">
+                  <div class="canvas-top-bar">
+                    <div class="canvas-status-tags">
+                      <span class="pq-slash">/</span>
+                      <span class="canvas-state-label" id="canvas-state-label">Synthesis Viewport</span>
+                      <span class="engine-badge hidden" id="canvas-source-tag">Engine: AI</span>
+                      <span class="latency-badge hidden" id="canvas-latency-tag">0.0s</span>
+                    </div>
+                    <div class="canvas-top-actions">
+                      <button type="button" class="pq-btn-outline-pill btn-sm hidden" id="toggle-compare-btn">
+                        ⇄ Compare Reference
+                      </button>
+                      <button type="button" class="pq-btn-outline-pill btn-sm" id="view-full-image-btn" disabled>
+                        ⛶ Full Screen
+                      </button>
+                    </div>
+                  </div>
+
+                  <div class="canvas-viewport" id="image-viewport">
+                    <div class="canvas-empty-state" id="canvas-placeholder">
+                      <div class="empty-icon-ring">✦</div>
+                      <h4>Visual Synthesizer Ready</h4>
+                      <p>Inspect the <strong>Target Reference Scene</strong> on the left, engineer your prompt above, and click <strong>Synthesize &amp; Score</strong>.</p>
+                      <span class="canvas-theme-watermark">PROMPT QUEST • THINK. PROMPT. WIN.</span>
+                    </div>
+
+                    <img id="active-generated-image" class="canvas-image-output hidden" alt="Generated Vision">
+
+                    <!-- Side-by-Side Comparison View -->
+                    <div id="comparison-split-view" class="comparison-split-view hidden">
+                      <div class="compare-pane">
+                        <span class="compare-pane-tag">Target Reference</span>
+                        <img id="compare-ref-img" src="" alt="Target Reference">
+                      </div>
+                      <div class="compare-pane">
+                        <span class="compare-pane-tag tag-orange">Your Generated Output</span>
+                        <img id="compare-gen-img" src="" alt="Generated Output">
+                      </div>
+                    </div>
+
+                    <!-- Loading Overlay -->
+                    <div class="canvas-loading-overlay hidden" id="generating-overlay">
+                      <div class="awsui-spinner"></div>
+                      <h4 id="gen-status-text">Synthesizing Future Vision...</h4>
+                      <p id="gen-sub-text">Rendering lighting semantics &amp; computing 4-pillar AI score</p>
+                      <div class="progress-track">
+                        <div class="progress-fill"></div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- AI Judge Scorecard -->
+                  <div class="eval-scorecard-card hidden" id="ai-eval-preview-card">
+                    <div class="eval-card-top">
+                      <div class="eval-judge-info">
+                        <div class="judge-badge-icon">✦</div>
+                        <div>
+                          <h5>AI Judge Evaluation Scorecard</h5>
+                          <span class="eval-sub" id="eval-challenge-name">Challenge Evaluation</span>
+                        </div>
+                      </div>
+
+                      <div class="eval-score-total-box">
+                        <div class="eval-score-total">
+                          <span class="score-num" id="eval-total-score">88.5</span>
+                          <span class="score-max">/ 100</span>
+                        </div>
+                        <span class="tier-pill" id="eval-tier-pill">🏆 Grandmaster Builder</span>
+                      </div>
+                    </div>
+
+                    <div class="eval-pillars-row">
+                      <div class="pillar-box">
+                        <div class="pillar-label-line">
+                          <span>1. Challenge Alignment</span>
+                          <strong id="score-rel">23 / 25</strong>
+                        </div>
+                        <div class="pillar-bar"><div class="fill" id="bar-rel" style="width: 92%"></div></div>
+                      </div>
+
+                      <div class="pillar-box">
+                        <div class="pillar-label-line">
+                          <span>2. Creative Originality</span>
+                          <strong id="score-cre">21 / 25</strong>
+                        </div>
+                        <div class="pillar-bar"><div class="fill" id="bar-cre" style="width: 84%"></div></div>
+                      </div>
+
+                      <div class="pillar-box">
+                        <div class="pillar-label-line">
+                          <span>3. Prompt Engineering</span>
+                          <strong id="score-tec">22 / 25</strong>
+                        </div>
+                        <div class="pillar-bar"><div class="fill" id="bar-tec" style="width: 88%"></div></div>
+                      </div>
+
+                      <div class="pillar-box">
+                        <div class="pillar-label-line">
+                          <span>4. Future &amp; Social Impact</span>
+                          <strong id="score-imp">22.5 / 25</strong>
+                        </div>
+                        <div class="pillar-bar"><div class="fill" id="bar-imp" style="width: 90%"></div></div>
+                      </div>
+                    </div>
+
+                    <div class="eval-footer-critique">
+                      <p class="critique-text" id="eval-summary-text"></p>
+                      <div class="badges-flex" id="eval-badges-row"></div>
+                    </div>
+                  </div>
+
+                </div>
+
+              </div>
+
             </div>
 
-            <!-- Email Input -->
-            <div class="awsui-form-group">
-              <label for="identifier-email" class="awsui-label">
-                Email Address <span class="required-star">*</span>
-                <span class="label-hint">(Used to store your score and submission)</span>
-              </label>
-              <input 
-                type="email" 
-                id="identifier-email" 
-                class="awsui-text-input" 
-                placeholder="name@university.edu or your personal email" 
-                autocomplete="email"
-              >
+          </div>
+        </section>
+
+        <!-- =============================================================== -->
+        <!-- SCREEN 3: LEADERBOARD (Hall of Future Builders)                 -->
+        <!-- =============================================================== -->
+        <section id="leaderboard-screen" class="view-screen">
+          <div class="leaderboard-layout">
+
+            <div class="leaderboard-top-bar">
+              <div>
+                <div class="pq-card-heading-row">
+                  <span class="pq-slash">/</span>
+                  <h2 class="leaderboard-title">Hall of Future Builders</h2>
+                </div>
+                <p class="leaderboard-sub">Live Prompt Quest standings combining AI Judge evaluations (100 pts) and community applause votes (+2 pts/vote).</p>
+              </div>
+
+              <div class="leaderboard-actions">
+                <select id="leaderboard-cat-filter" class="awsui-select" aria-label="Filter Leaderboard by Category">
+                  <option value="">All 8 Categories</option>
+                </select>
+                <button type="button" class="pq-btn-outline-pill" id="refresh-leaderboard-btn">↻ Refresh</button>
+                <button type="button" class="pq-btn-orange-pill" id="back-to-game-btn">
+                  <span>← Back to Arena</span>
+                </button>
+              </div>
             </div>
 
-            <!-- Error message container -->
-            <div id="identifier-error" class="identifier-error-msg hidden"></div>
+            <!-- Top 3 Podium Cards -->
+            <div id="leaderboard-podium-section" class="leaderboard-podium-grid hidden"></div>
 
-            <!-- Submit Button -->
-            <div class="form-action-group">
-              <button type="button" class="awsui-btn-primary" id="start-game-btn">
-                <span>Enter Main Game &amp; Reveal Challenge</span>
-                <span class="btn-arrow">→</span>
+            <!-- Standings Table -->
+            <div class="pq-dash-card table-card">
+              <table class="awsui-table">
+                <thead>
+                  <tr>
+                    <th>Rank</th>
+                    <th>Player</th>
+                    <th>Email</th>
+                    <th>Category &amp; Quest</th>
+                    <th>AI Score</th>
+                    <th>Total Score</th>
+                    <th>Tier Badge</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="leaderboard-table-body">
+                  <tr>
+                    <td colspan="8" class="table-empty">No submissions locked in yet. Enter the Arena to claim Rank #1!</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+          </div>
+        </section>
+
+        <!-- =============================================================== -->
+        <!-- SCREEN 4: ACHIEVEMENTS & TIER MASTERY                           -->
+        <!-- =============================================================== -->
+        <section id="achievements-screen" class="view-screen">
+          <div class="leaderboard-layout">
+            <div class="leaderboard-top-bar">
+              <div>
+                <div class="pq-card-heading-row">
+                  <span class="pq-slash">/</span>
+                  <h2 class="leaderboard-title">Builder Achievements &amp; Mastery</h2>
+                </div>
+                <p class="leaderboard-sub">Unlock special AI evaluation honors and master all 8 AWS Frontier Innovation Tracks.</p>
+              </div>
+              <button type="button" class="pq-btn-orange-pill" id="ach-to-arena-btn">
+                <span>Enter the Arena →</span>
               </button>
             </div>
 
-            <p class="identifier-footer-info">
-              🔒 All participants compete under the overarching theme. You will receive one randomly assigned challenge across the 8 categories upon entry.
-            </p>
-
-          </form>
-
-        </div>
-
-      </div>
-    </section>
-
-    <!-- ================================================================= -->
-    <!-- SCREEN 2: MAIN GAME (Workbench: Challenge + Prompt Studio)       -->
-    <!-- ================================================================= -->
-    <section id="game-screen" class="view-screen">
-      <div class="game-container-layout">
-        
-        <!-- Top Status Strip -->
-        <div class="game-header-strip">
-          <div class="builder-welcome-meta">
-            <span class="meta-label">PARTICIPANT:</span>
-            <strong class="builder-display-name" id="game-builder-name">Student Builder</strong>
-            <span class="builder-display-email" id="game-builder-email">(email@domain.com)</span>
-          </div>
-
-          <div class="game-theme-pill">
-            <span>THEME: <strong>BUILD THE FUTURE</strong></span>
-          </div>
-        </div>
-
-        <!-- Main Studio Grid -->
-        <div class="studio-two-col">
-          
-          <!-- LEFT: Assigned Challenge Card -->
-          <div class="studio-left-col">
-            
-            <div class="awsui-card challenge-box" id="assigned-challenge-card">
-              
-              <div class="challenge-top-meta">
-                <span class="challenge-theme-label">BUILD THE FUTURE</span>
-                <button class="btn-reroll-challenge" id="reroll-challenge-btn" title="Re-roll for another random challenge in this theme">
-                  🔄 Re-roll Challenge
-                </button>
+            <div class="pq-achievements-grid">
+              <div class="pq-dash-card pq-ach-card">
+                <div class="pq-ach-icon">🏆</div>
+                <h4>Grandmaster Builder</h4>
+                <p>Achieve an AI Evaluation Score of 88.0+ / 100 on any frontier prompt challenge.</p>
+                <span class="pq-ach-tag">Tier 5 Honor</span>
               </div>
-
-              <!-- Category Badge -->
-              <div class="category-tag-pill" id="player-cat-badge">
-                <span class="cat-dot"></span>
-                <span id="player-cat-name">Category Loading...</span>
+              <div class="pq-dash-card pq-ach-card">
+                <div class="pq-ach-icon">💡</div>
+                <h4>Lighting Virtuoso</h4>
+                <p>Master atmospheric lighting cues including volumetric god rays, caustics, and bioluminescence.</p>
+                <span class="pq-ach-tag">Technical Badge</span>
               </div>
-
-              <!-- Challenge Title -->
-              <h2 class="challenge-main-title" id="player-challenge-title">The Biosphere Hyper-Campus 2050</h2>
-
-              <!-- Mission Brief -->
-              <div class="mission-brief-block">
-                <span class="block-subtitle">CHALLENGE BRIEF</span>
-                <p id="player-challenge-brief">Envision an open-air, nature-integrated university campus where AI holographic mentors and student pods harmonize with a living ecosystem.</p>
+              <div class="pq-dash-card pq-ach-card">
+                <div class="pq-ach-icon">📷</div>
+                <h4>Cinematographer</h4>
+                <p>Engineer precise camera optics, depth of field, and rule-of-thirds composition.</p>
+                <span class="pq-ach-tag">Composition Badge</span>
               </div>
-
-              <!-- Visual Targets -->
-              <div class="visual-targets-block">
-                <span class="block-subtitle">TARGET VISUAL ELEMENTS</span>
-                <p id="player-visual-goals">Bioluminescent flora, floating interactive volumetric projections, solar-canopy glass pavilions.</p>
-              </div>
-
-              <!-- Inspiration Keywords -->
-              <div class="keywords-block">
-                <span class="block-subtitle">INSPIRATION CONCEPTS (Click to append to prompt)</span>
-                <div class="chips-flex-row" id="player-keywords-container">
-                  <!-- Chips injected via JS -->
-                </div>
-              </div>
-
-              <!-- AI Evaluation Rubric Information -->
-              <div class="rubric-mini-box">
-                <div class="rubric-header-row">
-                  <span>AI EVALUATION RUBRIC (100 PTS)</span>
-                  <span class="std-badge">Consistent Standard</span>
-                </div>
-                <div class="rubric-grid-2x2">
-                  <div class="rubric-pill-cell">
-                    <span class="cell-label">Relevance to Challenge</span>
-                    <strong class="cell-pts">25 pts</strong>
-                  </div>
-                  <div class="rubric-pill-cell">
-                    <span class="cell-label">Creativity &amp; Imagination</span>
-                    <strong class="cell-pts">25 pts</strong>
-                  </div>
-                  <div class="rubric-pill-cell">
-                    <span class="cell-label">Prompt Engineering</span>
-                    <strong class="cell-pts">25 pts</strong>
-                  </div>
-                  <div class="rubric-pill-cell">
-                    <span class="cell-label">Future &amp; Social Impact</span>
-                    <strong class="cell-pts">25 pts</strong>
-                  </div>
-                </div>
-              </div>
-
-            </div>
-
-            <!-- Session Generation Reel -->
-            <div class="awsui-card history-reel-box">
-              <div class="history-reel-header">
-                <h5>Session Generations</h5>
-                <span class="history-count" id="history-count">0</span>
-              </div>
-              <div class="history-reel-scroll" id="history-reel-container">
-                <p class="history-empty">No images generated yet. Formulate your first prompt!</p>
+              <div class="pq-dash-card pq-ach-card">
+                <div class="pq-ach-icon">🌍</div>
+                <h4>Future Visionary</h4>
+                <p>Synthesize sustainable, human-centric solutions aligned with the AWS Builder ethos.</p>
+                <span class="pq-ach-tag">Impact Badge</span>
               </div>
             </div>
 
+            <div class="pq-card-heading-row" style="margin: 28px 0 14px;">
+              <span class="pq-slash">/</span>
+              <h3>The 8 Official Frontier Challenge Tracks</h3>
+            </div>
+            <div class="categories-showcase-grid">
+              <div class="pq-dash-card category-preview-card"><span class="cat-card-index">01</span><h4>Future of Education</h4><p>Biophilic hyper-campuses, holographic mentors, and quantum learning pods.</p></div>
+              <div class="pq-dash-card category-preview-card"><span class="cat-card-index">02</span><h4>Smart Cities &amp; Sustainable Living</h4><p>Zero-carbon solarpunk archipelagos, vertical forest spires, and clean transit.</p></div>
+              <div class="pq-dash-card category-preview-card"><span class="cat-card-index">03</span><h4>Artificial Intelligence &amp; Humanity</h4><p>Symbiotic human-AI creative ateliers and planetary climate guardians.</p></div>
+              <div class="pq-dash-card category-preview-card"><span class="cat-card-index">04</span><h4>Space Exploration &amp; Civilizations</h4><p>Martian canyon biosphere domes and Europa abyssal research outposts.</p></div>
+              <div class="pq-dash-card category-preview-card"><span class="cat-card-index">05</span><h4>Technology for Social Impact</h4><p>Atmospheric desert water harvesters and autonomous medical clinics.</p></div>
+              <div class="pq-dash-card category-preview-card"><span class="cat-card-index">06</span><h4>Future of Work</h4><p>Volumetric telepresence maker commons and bionic craft workshops.</p></div>
+              <div class="pq-dash-card category-preview-card"><span class="cat-card-index">07</span><h4>Cloud-Powered Innovation</h4><p>Serverless planetary mesh networks and real-time renewable digital twins.</p></div>
+              <div class="pq-dash-card category-preview-card"><span class="cat-card-index">08</span><h4>Robotics &amp; Automation</h4><p>Biomimetic coral restoration swarms and alpine rescue quadrupeds.</p></div>
+            </div>
           </div>
+        </section>
 
-          <!-- RIGHT: Prompt Studio Canvas & Controls -->
-          <div class="studio-right-col">
-            
-            <!-- Canvas Display Card -->
-            <div class="awsui-card canvas-card">
-              
-              <div class="canvas-top-bar">
-                <div class="canvas-status-tags">
-                  <span class="canvas-state-label" id="canvas-state-label">Studio Canvas Ready</span>
-                  <span class="engine-badge hidden" id="canvas-source-tag">Engine: Cloud AI</span>
-                  <span class="latency-badge hidden" id="canvas-latency-tag">0.0s</span>
+        <!-- =============================================================== -->
+        <!-- SCREEN 5: BUILDER PROFILE                                       -->
+        <!-- =============================================================== -->
+        <section id="profile-screen" class="view-screen">
+          <div class="leaderboard-layout">
+            <div class="leaderboard-top-bar">
+              <div>
+                <div class="pq-card-heading-row">
+                  <span class="pq-slash">/</span>
+                  <h2 class="leaderboard-title">Builder Profile &amp; Session Stats</h2>
                 </div>
-                <button class="awsui-btn-secondary btn-sm" id="view-full-image-btn" disabled>Full Screen</button>
+                <p class="leaderboard-sub">Your registered AWS Community Day identity and active Prompt Quest performance.</p>
               </div>
-
-              <!-- The Image Viewport -->
-              <div class="canvas-viewport" id="image-viewport">
-                
-                <div class="canvas-empty-state" id="canvas-placeholder">
-                  <div class="empty-icon">🎨</div>
-                  <h4>Visual Synthesizer Ready</h4>
-                  <p>Read your assigned challenge on the left, formulate your descriptive prompt below, and click <strong>Generate Visual</strong>.</p>
-                  <span class="canvas-theme-watermark">BUILD THE FUTURE – Imagine. Innovate. Create.</span>
-                </div>
-
-                <img id="active-generated-image" class="canvas-image-output hidden" alt="Generated Vision">
-
-                <!-- Loading Overlay -->
-                <div class="canvas-loading-overlay hidden" id="generating-overlay">
-                  <div class="awsui-spinner"></div>
-                  <h4 id="gen-status-text">Synthesizing Future Vision...</h4>
-                  <p id="gen-sub-text">Interpreting prompt semantics &amp; rendering atmospheric lighting</p>
-                  <div class="progress-track">
-                    <div class="progress-fill"></div>
-                  </div>
-                </div>
-
-              </div>
-
-              <!-- AI Evaluation Scorecard (Appears after generation) -->
-              <div class="eval-scorecard-card hidden" id="ai-eval-preview-card">
-                
-                <div class="eval-card-top">
-                  <div class="eval-judge-info">
-                    <span class="judge-badge-icon">🤖</span>
-                    <div>
-                      <h5>AI Judge Scorecard</h5>
-                      <span class="eval-sub" id="eval-challenge-name">Challenge: Oceanic Solarpunk Archipelago</span>
-                    </div>
-                  </div>
-
-                  <div class="eval-score-total">
-                    <span class="score-num" id="eval-total-score">88.5</span>
-                    <span class="score-max">/100</span>
-                    <span class="tier-pill" id="eval-tier-pill">🏆 Grandmaster Builder</span>
-                  </div>
-                </div>
-
-                <!-- 4 Pillars Grid -->
-                <div class="eval-pillars-row">
-                  <div class="pillar-box">
-                    <div class="pillar-label-line">
-                      <span>1. Challenge Relevance</span>
-                      <strong id="score-rel">23 / 25</strong>
-                    </div>
-                    <div class="pillar-bar"><div class="fill" id="bar-rel" style="width: 92%"></div></div>
-                  </div>
-
-                  <div class="pillar-box">
-                    <div class="pillar-label-line">
-                      <span>2. Creativity &amp; Imagination</span>
-                      <strong id="score-cre">21 / 25</strong>
-                    </div>
-                    <div class="pillar-bar"><div class="fill" id="bar-cre" style="width: 84%"></div></div>
-                  </div>
-
-                  <div class="pillar-box">
-                    <div class="pillar-label-line">
-                      <span>3. Prompt Craft Quality</span>
-                      <strong id="score-tec">22 / 25</strong>
-                    </div>
-                    <div class="pillar-bar"><div class="fill" id="bar-tec" style="width: 88%"></div></div>
-                  </div>
-
-                  <div class="pillar-box">
-                    <div class="pillar-label-line">
-                      <span>4. Future &amp; Social Impact</span>
-                      <strong id="score-imp">22.5 / 25</strong>
-                    </div>
-                    <div class="pillar-bar"><div class="fill" id="bar-imp" style="width: 90%"></div></div>
-                  </div>
-                </div>
-
-                <!-- Critique & Badges -->
-                <div class="eval-footer-critique">
-                  <p class="critique-text" id="eval-summary-text"></p>
-                  <div class="badges-flex" id="eval-badges-row"></div>
-                </div>
-
-              </div>
-
+              <button type="button" class="pq-btn-orange-pill" id="profile-to-arena-btn">
+                <span>Go to Prompt Arena →</span>
+              </button>
             </div>
 
-            <!-- Prompt Console Card -->
-            <div class="awsui-card prompt-card">
-              
-              <div class="prompt-header-row">
-                <span class="prompt-title">Prompt Engineering Console</span>
-                <span class="char-counter" id="char-counter">0 chars / 0 words</span>
+            <div class="pq-profile-grid">
+              <div class="pq-dash-card pq-profile-card">
+                <div class="pq-profile-header">
+                  <div class="pq-profile-avatar-lg" id="profile-avatar-lg">A</div>
+                  <div>
+                    <h3 id="profile-display-name">Guest Builder</h3>
+                    <p id="profile-display-email">Not signed in yet — Register on Home</p>
+                  </div>
+                </div>
+                <div class="pq-profile-stats-row">
+                  <div class="pq-pstat">
+                    <span class="pq-pstat-label">Generations</span>
+                    <strong id="profile-gen-count">0</strong>
+                  </div>
+                  <div class="pq-pstat">
+                    <span class="pq-pstat-label">Best AI Score</span>
+                    <strong id="profile-best-score">0.0</strong>
+                  </div>
+                  <div class="pq-pstat">
+                    <span class="pq-pstat-label">Current Quest</span>
+                    <strong id="profile-quest-name">Unassigned</strong>
+                  </div>
+                </div>
               </div>
-
-              <!-- Quick Modifiers -->
-              <div class="prompt-modifiers-row">
-                <span class="mod-label">Quick Modifiers:</span>
-                <button class="mod-pill-tag" data-insert=", cinematic volumetric lighting, atmospheric depth">💡 Volumetric Light</button>
-                <button class="mod-pill-tag" data-insert=", bioluminescent flora, ambient glow">✨ Bioluminescence</button>
-                <button class="mod-pill-tag" data-insert=", wide-angle cinematic establishing shot">📷 Wide Angle</button>
-                <button class="mod-pill-tag" data-insert=", solarpunk clean architecture, lush nature">🌿 Solarpunk Eco</button>
-                <button class="mod-pill-tag" data-insert=", holographic interactive data interface">🔮 Holographic</button>
-                <button class="mod-pill-tag" data-insert=", photorealistic 8k render, hyper-detailed">💎 8K Render</button>
-              </div>
-
-              <!-- Textarea -->
-              <div class="prompt-input-box">
-                <textarea 
-                  id="prompt-input" 
-                  class="awsui-textarea" 
-                  rows="3" 
-                  placeholder="Describe your vision for this challenge with specific architectural elements, materials, lighting, and composition..."
-                ></textarea>
-              </div>
-
-              <!-- Actions -->
-              <div class="prompt-actions-bar">
-                <button class="awsui-btn-secondary" id="clear-prompt-btn">Clear</button>
-                <button class="awsui-btn-primary" id="generate-image-btn">
-                  <span>⚡ Generate Visual</span>
-                </button>
-                <button class="awsui-btn-dark" id="submit-masterpiece-btn" disabled>
-                  <span>🏆 Submit &amp; Save Score</span>
-                </button>
-              </div>
-
             </div>
-
           </div>
+        </section>
 
-        </div>
+      </main>
 
-      </div>
-    </section>
+    </div>
 
-    <!-- ================================================================= -->
-    <!-- SCREEN 3: LEADERBOARD (Accessible via Top Nav)                    -->
-    <!-- ================================================================= -->
-    <section id="leaderboard-screen" class="view-screen">
-      <div class="leaderboard-layout">
-        
-        <div class="leaderboard-top-bar">
-          <div>
-            <h2 class="leaderboard-title">Hall of Future Builders</h2>
-            <p class="leaderboard-sub">Scores stored under builder name &amp; email from the AI evaluation engine.</p>
-          </div>
-          
-          <div class="leaderboard-actions">
-            <button class="awsui-btn-secondary" id="back-to-game-btn">← Back to Main Game</button>
-            <select id="leaderboard-cat-filter" class="awsui-select">
-              <option value="">All Categories</option>
-            </select>
-          </div>
-        </div>
-
-        <!-- Table Container -->
-        <div class="awsui-card table-card">
-          <table class="awsui-table">
-            <thead>
-              <tr>
-                <th>Rank</th>
-                <th>Student Builder</th>
-                <th>Email</th>
-                <th>Category &amp; Challenge</th>
-                <th>AI Score</th>
-                <th>Total Score</th>
-                <th>Badges</th>
-                <th>Inspect</th>
-              </tr>
-            </thead>
-            <tbody id="leaderboard-table-body">
-              <tr>
-                <td colspan="8" class="table-empty">No submissions locked in yet. Be the first to submit from the Prompt Studio!</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-      </div>
-    </section>
-
-  </main>
+  </div>
 
   <!-- =====================================================================
-       ADMIN MODAL
+       SETTINGS & ADMIN COMMAND CENTER MODAL
        ===================================================================== -->
-  <div class="modal-backdrop hidden" id="admin-modal">
-    <div class="awsui-modal-card">
-      
+  <div class="modal-backdrop hidden" id="admin-modal" role="dialog" aria-modal="true" aria-labelledby="admin-modal-title">
+    <div class="pq-dash-card awsui-modal-card">
+
       <div class="awsui-modal-header">
         <div class="modal-header-title">
-          <span class="modal-cog">⚙️</span>
-          <h3>Admin Command Center</h3>
+          <img src="/static/images/aws-logo.png?v=refined2" alt="AWS" class="modal-aws-logo">
+          <h3 id="admin-modal-title">Settings &amp; Admin Command Center</h3>
         </div>
-        <button class="modal-close-btn" id="close-admin-modal">✕</button>
+        <button type="button" class="modal-close-btn" id="close-admin-modal" aria-label="Close Admin Modal">✕</button>
       </div>
 
       <!-- Auth -->
       <div id="admin-auth-panel" class="modal-auth-body">
-        <p>Enter the competition administrator code to manage challenges and rounds.</p>
+        <div class="auth-lock-badge">🔒</div>
+        <h4>Administrator Access</h4>
+        <p>Enter the competition administrator code (<code>builder2026</code>) to manage challenges, categories, and live event rounds.</p>
         <div class="modal-auth-row">
           <input type="password" id="admin-code-input" class="awsui-text-input" placeholder="Admin Access Code..." autocomplete="off">
-          <button class="awsui-btn-primary" id="admin-login-btn">Authenticate</button>
+          <button type="button" class="pq-btn-orange-pill" id="admin-login-btn">Authenticate</button>
         </div>
         <p class="auth-error-text hidden" id="admin-auth-error">Incorrect admin code.</p>
       </div>
 
       <!-- Dashboard -->
       <div id="admin-dashboard-panel" class="modal-dashboard-body hidden">
-        
+
         <div class="awsui-modal-tabs">
-          <button class="modal-tab-btn active" data-tab="tab-challenges">Challenge Management (8 Categories)</button>
-          <button class="modal-tab-btn" data-tab="tab-competition">Competition Controls</button>
+          <button type="button" class="modal-tab-btn active" data-tab="tab-challenges">Challenge Catalog (8 Categories)</button>
+          <button type="button" class="modal-tab-btn" data-tab="tab-competition">Competition Phase &amp; Reset</button>
         </div>
 
         <!-- Tab 1: Challenges -->
         <div class="modal-tab-content active" id="tab-challenges">
-          
+
           <div class="admin-stats-strip">
             <div class="admin-stat-cell">
               <span class="stat-big-num" id="stat-total-challenges">16</span>
@@ -527,7 +981,7 @@
           </div>
 
           <!-- Add Challenge Form -->
-          <div class="awsui-card add-challenge-box">
+          <div class="pq-dash-card add-challenge-box">
             <div class="accordion-head" id="toggle-add-challenge-form">
               <h4>+ Create &amp; Add New Challenge</h4>
               <span class="accordion-carat">▼</span>
@@ -544,23 +998,23 @@
                 </div>
                 <div class="form-cell full-width">
                   <label class="awsui-label">Challenge Brief / Scenario *</label>
-                  <textarea id="new-challenge-brief" class="awsui-textarea" rows="2" placeholder="Describe the creative futuristic scenario for participants to imagine..."></textarea>
+                  <textarea id="new-challenge-brief" class="awsui-textarea" rows="2" placeholder="Describe the creative futuristic scenario..."></textarea>
                 </div>
                 <div class="form-cell full-width">
                   <label class="awsui-label">Visual Goals / Cues</label>
-                  <input type="text" id="new-challenge-visual" class="awsui-text-input" placeholder="e.g. Terraced vertical gardens, cascading clear waterfalls, solar towers">
+                  <input type="text" id="new-challenge-visual" class="awsui-text-input" placeholder="e.g. Terraced vertical gardens, solar towers">
                 </div>
                 <div class="form-cell">
                   <label class="awsui-label">Inspiration Keywords (comma separated)</label>
-                  <input type="text" id="new-challenge-keywords" class="awsui-text-input" placeholder="e.g. Solarpunk, Clean Maglev, Wave Dynamos">
+                  <input type="text" id="new-challenge-keywords" class="awsui-text-input" placeholder="e.g. Solarpunk, Clean Maglev">
                 </div>
                 <div class="form-cell">
                   <label class="awsui-label">Evaluation Focus</label>
-                  <input type="text" id="new-challenge-focus" class="awsui-text-input" placeholder="e.g. Believable renewable energy motifs and environmental harmony">
+                  <input type="text" id="new-challenge-focus" class="awsui-text-input" placeholder="e.g. Renewable energy motifs">
                 </div>
               </div>
               <div class="form-actions-bar">
-                <button class="awsui-btn-primary" id="save-new-challenge-btn">Save &amp; Activate Challenge</button>
+                <button type="button" class="pq-btn-orange-pill" id="save-new-challenge-btn">Save &amp; Activate Challenge</button>
               </div>
             </div>
           </div>
@@ -573,7 +1027,7 @@
                 <select id="admin-cat-filter" class="awsui-select-sm">
                   <option value="">All Categories</option>
                 </select>
-                <button class="awsui-btn-secondary btn-sm" id="reset-challenges-btn">Reset to Defaults</button>
+                <button type="button" class="pq-btn-outline-pill btn-sm" id="reset-challenges-btn">Reset to Defaults</button>
               </div>
             </div>
             <div class="catalog-table-scroll">
@@ -593,13 +1047,24 @@
 
         </div>
 
-        <!-- Tab 2: Competition -->
+        <!-- Tab 2: Competition Controls -->
         <div class="modal-tab-content" id="tab-competition">
           <div class="admin-control-cards-grid">
+            <div class="admin-panel-card">
+              <h4>Competition Phase Control</h4>
+              <p>Switch active competition phase and round timer for all connected players:</p>
+              <div class="phase-btn-group">
+                <button type="button" class="pq-btn-outline-pill btn-phase-ctrl" data-phase="lobby">Lobby Mode</button>
+                <button type="button" class="pq-btn-orange-pill btn-phase-ctrl" data-phase="battle">Start Battle Round</button>
+                <button type="button" class="pq-btn-outline-pill btn-phase-ctrl" data-phase="showcase">Showcase &amp; Voting</button>
+                <button type="button" class="pq-btn-outline-pill btn-phase-ctrl" data-phase="leaderboard">Final Standings</button>
+              </div>
+            </div>
+
             <div class="admin-panel-card danger-panel">
-              <h4>Reset Competition</h4>
-              <p>Clears participants, generations, and locked-in submissions:</p>
-              <button class="awsui-btn-danger" id="reset-comp-btn">RESET ALL DATA</button>
+              <h4>Reset Competition Data</h4>
+              <p>Clears all participants, generations, and locked-in leaderboard submissions:</p>
+              <button type="button" class="awsui-btn-danger" id="reset-comp-btn">RESET ALL DATA</button>
             </div>
           </div>
         </div>
@@ -609,16 +1074,18 @@
     </div>
   </div>
 
-  <!-- Image Zoom Modal -->
-  <div class="modal-backdrop hidden" id="image-modal">
+  <!-- =====================================================================
+       IMAGE & PROMPT INSPECTION MODAL
+       ===================================================================== -->
+  <div class="modal-backdrop hidden" id="image-modal" role="dialog" aria-modal="true">
     <div class="awsui-image-modal-card">
-      <button class="modal-close-btn" id="close-image-modal">✕</button>
+      <button type="button" class="modal-close-btn image-modal-close" id="close-image-modal" aria-label="Close">✕</button>
       <img id="modal-full-image" src="" alt="Full resolution view">
       <div class="image-modal-caption" id="modal-image-caption"></div>
     </div>
   </div>
 
   <!-- Client Script Engine -->
-  <script src="/static/js/battle.js"></script>
+  <script src="/static/js/battle.js?v=refined2"></script>
 </body>
 </html>
