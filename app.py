@@ -84,7 +84,20 @@ def index():
         theme=competition_state["theme"],
         subtitle=competition_state["subtitle"],
         philosophy=competition_state["philosophy"],
-        categories=OFFICIAL_CATEGORIES
+        categories=OFFICIAL_CATEGORIES,
+        open_admin=False
+    )
+
+@app.route("/admin")
+@app.route("/admin/")
+def admin_page():
+    return render_template(
+        "index.html",
+        theme=competition_state["theme"],
+        subtitle=competition_state["subtitle"],
+        philosophy=competition_state["philosophy"],
+        categories=OFFICIAL_CATEGORIES,
+        open_admin=True
     )
 
 # -----------------------------------------------------------------------------

@@ -115,7 +115,16 @@ document.addEventListener("DOMContentLoaded", () => {
     introTimers.push(tDock, tComplete);
   }
 
-  runOpeningLogoAnimation(false);
+  const isAdminRoute =
+    document.body.dataset.adminRoute === "true" ||
+    window.location.pathname === "/admin" ||
+    window.location.pathname === "/admin/";
+
+  if (isAdminRoute) {
+    finishIntroImmediately();
+  } else {
+    runOpeningLogoAnimation(false);
+  }
 
   if (replayIntroBtn) {
     replayIntroBtn.addEventListener("click", () => {
@@ -150,13 +159,13 @@ document.addEventListener("DOMContentLoaded", () => {
       screens[name].classList.add("active");
     }
 
-    // Hide Leaderboard button on Login screen; show it only after login
+    // Show Leaderboard button ONLY after the participant's round is finished (or for admins)
     const topLbBtn = document.getElementById("nav-leaderboard-btn");
     if (topLbBtn) {
-      if (name === "identifier" || !state.participant) {
-        topLbBtn.classList.add("hidden");
-      } else {
+      if (state.isAdmin || (state.participant && state.hasGenerated && (name === "results" || name === "leaderboard"))) {
         topLbBtn.classList.remove("hidden");
+      } else {
+        topLbBtn.classList.add("hidden");
       }
     }
 
@@ -427,7 +436,18 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Switch User / Next Participant handler
+  // Switch User / Next Contestant handler (clears saved identity and redirects cleanly to start)
+  function handleNextContestantRedirect() {
+    playAudioTone("click");
+    stopChallengeTimer();
+    try {
+      localStorage.removeItem("sbg_builder_name");
+      localStorage.removeItem("sbg_builder_email");
+      localStorage.removeItem("sbg_participant_id");
+    } catch (e) { }
+    window.location.assign("/");
+  }
+
   function handleSignOutAndReset() {
     playAudioTone("click");
     try {
@@ -443,19 +463,24 @@ document.addEventListener("DOMContentLoaded", () => {
     state.generations = [];
     unlockWorkspaceForNewSession();
 
+    const nameEl = document.getElementById("identifier-name");
+    const emailEl = document.getElementById("identifier-email");
+    if (nameEl) nameEl.value = "";
+    if (emailEl) emailEl.value = "";
+
     const userPill = document.getElementById("top-nav-user-pill");
     if (userPill) userPill.classList.add("hidden");
     if (defaultAvatarTrigger) defaultAvatarTrigger.classList.remove("hidden");
 
     showScreen("identifier");
-    showToast("Ready for next participant. Enter name & email to begin.", "info");
+    showToast("Ready for next contestant. Enter name & email to begin.", "info");
   }
 
   const changeUserBtn = document.getElementById("change-user-btn");
   if (changeUserBtn) changeUserBtn.addEventListener("click", handleSignOutAndReset);
 
-  const resultsNextPlayerBtn = document.getElementById("results-next-player-btn");
-  if (resultsNextPlayerBtn) resultsNextPlayerBtn.addEventListener("click", handleSignOutAndReset);
+  const nextContestantBtn = document.getElementById("next-contestant-btn");
+  if (nextContestantBtn) nextContestantBtn.addEventListener("click", handleNextContestantRedirect);
 
   // ---------------------------------------------------------------------------
   // 1. IDENTIFIER REGISTRATION (Name + Email)
@@ -1224,6 +1249,8 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     const evalCardBefore = document.getElementById("ai-eval-preview-card");
     if (evalCardBefore) evalCardBefore.classList.add("hidden");
+    const nextFooterBefore = document.getElementById("results-next-footer");
+    if (nextFooterBefore) nextFooterBefore.classList.add("hidden");
     if (viewFullBtn) viewFullBtn.disabled = true;
     if (submitBtn) {
       submitBtn.disabled = true;
@@ -1320,6 +1347,9 @@ document.addEventListener("DOMContentLoaded", () => {
             ? `<span>🏆 Score Saved — View Leaderboard</span>`
             : `<span>🏆 Lock In &amp; Save Score</span>`;
         }
+
+        const nextFooterDone = document.getElementById("results-next-footer");
+        if (nextFooterDone) nextFooterDone.classList.remove("hidden");
 
         showScreen("results");
         const prefix = autoTriggered ? "⏱️ Auto-generated at 00:00! " : "Final image generated & score saved! ";
@@ -1612,32 +1642,36 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (podiumSection) {
         podiumSection.innerHTML = "";
-        podiumSection.classList.remove("hidden");
-        list.slice(0, 3).forEach(entry => {
-          const card = document.createElement("div");
-          card.className = `podium-card podium-rank-${entry.rank}`;
-          card.innerHTML = `
-            <div class="podium-img-wrap" title="Click to inspect full resolution">
-              <img src="${entry.image_data}" alt="${entry.player_name}">
-              <span class="podium-rank-badge">#${entry.rank} ${entry.rank === 1 ? "🏆" : entry.rank === 2 ? "🥈" : "🥉"}</span>
-            </div>
-            <div class="podium-body">
-              <div class="podium-builder-row">
-                <span class="podium-builder-name">${entry.player_name}</span>
-                <span class="podium-score-val">${entry.composite_score} pts</span>
+        if (state.isAdmin) {
+          podiumSection.classList.remove("hidden");
+          list.slice(0, 3).forEach(entry => {
+            const card = document.createElement("div");
+            card.className = `podium-card podium-rank-${entry.rank}`;
+            card.innerHTML = `
+              <div class="podium-img-wrap" title="Click to inspect full resolution">
+                <img src="${entry.image_data}" alt="${entry.player_name}">
+                <span class="podium-rank-badge">#${entry.rank} ${entry.rank === 1 ? "🏆" : entry.rank === 2 ? "🥈" : "🥉"}</span>
               </div>
-              <div class="podium-cat-text">${entry.category} &bull; ${entry.challenge_title}</div>
-              <p class="podium-prompt-snip">"${entry.prompt}"</p>
-            </div>
-          `;
-          card.querySelector(".podium-img-wrap").addEventListener("click", () => {
-            openImageModal(
-              entry.image_data,
-              `"${entry.prompt}" — ${entry.player_name} (${entry.player_email || ""}) | Score: ${entry.composite_score} pts`
-            );
+              <div class="podium-body">
+                <div class="podium-builder-row">
+                  <span class="podium-builder-name">${entry.player_name}</span>
+                  <span class="podium-score-val">${entry.composite_score} pts</span>
+                </div>
+                <div class="podium-cat-text">${entry.category} &bull; ${entry.challenge_title}</div>
+                <p class="podium-prompt-snip">"${entry.prompt}"</p>
+              </div>
+            `;
+            card.querySelector(".podium-img-wrap").addEventListener("click", () => {
+              openImageModal(
+                entry.image_data,
+                `"${entry.prompt}" — ${entry.player_name} (${entry.player_email || ""}) | Score: ${entry.composite_score} pts`
+              );
+            });
+            podiumSection.appendChild(card);
           });
-          podiumSection.appendChild(card);
-        });
+        } else {
+          podiumSection.classList.add("hidden");
+        }
       }
 
       leaderboardBody.innerHTML = "";
@@ -1662,7 +1696,7 @@ document.addEventListener("DOMContentLoaded", () => {
               <button type="button" class="btn-vote-applause" title="Upvote creation (+2 pts)">
                 👏 ${entry.votes || 0}
               </button>
-              <button type="button" class="pq-btn-outline-pill btn-sm inspect-entry-btn">Inspect</button>
+              ${state.isAdmin ? `<button type="button" class="pq-btn-outline-pill btn-sm inspect-entry-btn">Inspect</button>` : ""}
             </div>
           </td>
         `;
@@ -1690,20 +1724,23 @@ document.addEventListener("DOMContentLoaded", () => {
           });
         }
 
-        tr.querySelector(".inspect-entry-btn").addEventListener("click", () => {
-          if (entry.target_image) {
-            openDualImageModal(
-              entry.target_image,
-              entry.image_data,
-              `"${entry.prompt}" — ${entry.player_name} (${entry.player_email || ""}) | Match Score: ${entry.ai_score}/100 pts${entry.unbiased_critique ? " | Judge: " + entry.unbiased_critique : ""}`
-            );
-          } else {
-            openImageModal(
-              entry.image_data,
-              `"${entry.prompt}" — ${entry.player_name} (${entry.player_email || ""}) | Score: ${entry.composite_score} pts`
-            );
-          }
-        });
+        const inspectBtn = tr.querySelector(".inspect-entry-btn");
+        if (inspectBtn) {
+          inspectBtn.addEventListener("click", () => {
+            if (entry.target_image) {
+              openDualImageModal(
+                entry.target_image,
+                entry.image_data,
+                `"${entry.prompt}" — ${entry.player_name} (${entry.player_email || ""}) | Match Score: ${entry.ai_score}/100 pts${entry.unbiased_critique ? " | Judge: " + entry.unbiased_critique : ""}`
+              );
+            } else {
+              openImageModal(
+                entry.image_data,
+                `"${entry.prompt}" — ${entry.player_name} (${entry.player_email || ""}) | Score: ${entry.composite_score} pts`
+              );
+            }
+          });
+        }
 
         leaderboardBody.appendChild(tr);
       });
@@ -1789,6 +1826,23 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  if (adminCodeInput && adminLoginBtn) {
+    adminCodeInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        adminLoginBtn.click();
+      }
+    });
+  }
+
+  // Automatically open Admin Command Center login when visiting /admin directly
+  if (isAdminRoute && adminModal) {
+    adminModal.classList.remove("hidden");
+    if (adminCodeInput) {
+      setTimeout(() => adminCodeInput.focus(), 80);
+    }
+  }
+
   if (closeAdminModal) {
     closeAdminModal.addEventListener("click", () => adminModal.classList.add("hidden"));
   }
@@ -1811,6 +1865,7 @@ document.addEventListener("DOMContentLoaded", () => {
           if (adminAuthError) adminAuthError.classList.add("hidden");
           playAudioTone("success");
           loadAdminChallenges();
+          loadLeaderboard();
         } else {
           if (adminAuthError) adminAuthError.classList.remove("hidden");
         }

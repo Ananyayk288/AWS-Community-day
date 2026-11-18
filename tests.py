@@ -249,6 +249,14 @@ class TestReversePromptBattle(unittest.TestCase):
         self.assertTrue(retry_resp.get_json().get('already_generated'))
 
     def test_admin_authentication(self):
+        admin_page_resp = self.client.get('/admin')
+        self.assertEqual(admin_page_resp.status_code, 200)
+        self.assertIn(b'data-admin-route="true"', admin_page_resp.data)
+
+        home_resp = self.client.get('/')
+        self.assertEqual(home_resp.status_code, 200)
+        self.assertIn(b'data-admin-route="false"', home_resp.data)
+
         auth_resp = self.client.post('/api/admin/auth', json={'admin_code': ADMIN_CODE})
         self.assertEqual(auth_resp.status_code, 200)
         self.assertTrue(auth_resp.get_json()['success'])

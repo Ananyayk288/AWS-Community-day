@@ -10,12 +10,12 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:ital,wght@0,600;0,700;0,800;1,700;1,800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/css/style.css?v=pq-ux-v9">
+  <link rel="stylesheet" href="/static/css/style.css?v=pq-ux-v12">
 
   <!-- Socket.IO Client -->
   <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 </head>
-<body class="pq-dark-theme intro-active">
+<body class="pq-dark-theme intro-active" data-admin-route="{{ 'true' if open_admin else 'false' }}">
 
   <!-- =====================================================================
        OPENING AWS LOGO STAGE & FLIP ANIMATION OVERLAY
@@ -105,12 +105,17 @@
         <!-- =============================================================== -->
         <section id="identifier-screen" class="view-screen active">
 
-          <!-- 1. HERO BANNER -->
+          <!-- 1. HERO BANNER (Centered 3D AI Robot First -> Prompt Quest Title) -->
           <div class="pq-hero-banner">
             <!-- Top-left angled lavender tech corner accent -->
             <svg class="pq-hero-corner-line" viewBox="0 0 70 70" fill="none">
               <path d="M2 52 L52 2 L70 2" stroke="#B69AFF" stroke-width="1.6" stroke-opacity="0.75"/>
             </svg>
+
+            <!-- Centerpiece 3D AI Robot Illustration (First thing visible) -->
+            <div class="pq-hero-illustration">
+              <img src="/static/images/hero-robot.png?v=refined2" alt="Prompt Quest AI Robot" class="pq-hero-robot-img" draggable="false">
+            </div>
 
             <div class="pq-hero-content">
               <div class="pq-hero-title-wrap">
@@ -139,11 +144,6 @@
                 Craft the smartest prompts, tackle exciting challenges<br>
                 and climb the leaderboard!
               </p>
-            </div>
-
-            <!-- Right Side 3D AI Robot Illustration -->
-            <div class="pq-hero-illustration">
-              <img src="/static/images/hero-robot.png?v=refined2" alt="Prompt Quest AI Robot" class="pq-hero-robot-img" draggable="false">
             </div>
           </div>
 
@@ -218,15 +218,6 @@
                 <span class="timer-label" id="countdown-timer-label">AUTO-GENERATE IN</span>
                 <strong class="timer-digits" id="countdown-timer-display">03:00</strong>
               </div>
-
-              <div class="game-strip-actions">
-                <div class="game-theme-pill">
-                  <span>MODE: <strong>1-SHOT CHALLENGE</strong></span>
-                </div>
-                <button type="button" class="pq-btn-outline-pill btn-sm" id="studio-to-leaderboard-btn">
-                  <span>🏆 Standings</span>
-                </button>
-              </div>
             </div>
 
             <!-- ROW 1: TARGET REFERENCE IMAGE (LEFT) + CLEAN PROMPT TEXT BOX (RIGHT) -->
@@ -239,9 +230,6 @@
                     <span class="cat-dot"></span>
                     <span id="player-cat-name">Category Loading...</span>
                   </div>
-                  <button type="button" class="btn-reroll-challenge" id="reroll-challenge-btn" title="Re-roll for another randomized challenge">
-                    🔄 Re-roll Quest
-                  </button>
                 </div>
 
                 <h2 class="challenge-main-title" id="player-challenge-title">Target Reference Scene</h2>
@@ -326,9 +314,6 @@
               <div class="game-strip-actions">
                 <button type="button" class="pq-btn-gold-lock" id="submit-masterpiece-btn" disabled>
                   <span>🏆 View Leaderboard</span>
-                </button>
-                <button type="button" class="pq-btn-outline-pill btn-sm" id="results-next-player-btn">
-                  <span>👤 Next Participant</span>
                 </button>
               </div>
             </div>
@@ -463,6 +448,14 @@
                 <div class="features-comparison-row" id="eval-features-row"></div>
                 <div class="badges-flex" id="eval-badges-row"></div>
               </div>
+            </div>
+
+            <!-- Next Contestant Redirect Footer (Shown After Results Load) -->
+            <div class="pq-results-footer-bar hidden" id="results-next-footer">
+              <button type="button" class="pq-btn-orange-pill pq-next-contestant-cta" id="next-contestant-btn">
+                <span>👤 Next Contestant</span>
+                <span class="btn-arrow">→</span>
+              </button>
             </div>
 
           </div>
@@ -807,6 +800,6 @@
   </div>
 
   <!-- Client Script Engine -->
-  <script src="/static/js/battle.js?v=pq-ux-v5"></script>
+  <script src="/static/js/battle.js?v=pq-ux-v8"></script>
 </body>
 </html>
