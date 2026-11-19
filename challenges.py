@@ -409,9 +409,17 @@ class ChallengeManager:
         self.global_deck_index = 0
 
     def get_all(self, active_only=False):
-        if active_only:
-            return [c for c in self.challenges if c.get("is_active", True)]
-        return list(self.challenges)
+        raw = [c for c in self.challenges if (not active_only or c.get("is_active", True))]
+        results = []
+        for c in raw:
+            item = dict(c)
+            cid = item.get("id")
+            for ext in [".jpg", ".jpeg", ".png", ".webp"]:
+                if os.path.exists(os.path.join("static", "images", "challenges", f"{cid}{ext}")):
+                    item["static_url"] = f"/static/images/challenges/{cid}{ext}"
+                    break
+            results.append(item)
+        return results
 
     def get_all_challenges(self):
         return self.get_all(active_only=False)
@@ -496,18 +504,20 @@ class ChallengeManager:
         target["seed"] = random.randint(100000, 999999)
 
         # Look for local static photo asset
-        local_img_path = os.path.join("static", "images", "challenges", f"{challenge_id}.jpg")
-        if os.path.exists(local_img_path):
-            try:
-                with open(local_img_path, "rb") as f:
-                    b64_data = base64.b64encode(f.read()).decode("utf-8")
-                target["image_data"] = f"data:image/jpeg;base64,{b64_data}"
-                target["image_source"] = "cinematic-photo-bank"
-                target["static_url"] = f"/static/images/challenges/{challenge_id}.jpg"
-                target["hidden_prompt"] = f"{target['title']}: {target['brief']}"
-                return target
-            except Exception as e:
-                print(f"[ChallengeManager] Error loading local image {local_img_path}: {e}")
+        for ext in [".jpg", ".jpeg", ".png", ".webp"]:
+            local_img_path = os.path.join("static", "images", "challenges", f"{challenge_id}{ext}")
+            if os.path.exists(local_img_path):
+                try:
+                    with open(local_img_path, "rb") as f:
+                        b64_data = base64.b64encode(f.read()).decode("utf-8")
+                    mime = "image/png" if ext == ".png" else "image/webp" if ext == ".webp" else "image/jpeg"
+                    target["image_data"] = f"data:{mime};base64,{b64_data}"
+                    target["image_source"] = "cinematic-photo-bank"
+                    target["static_url"] = f"/static/images/challenges/{challenge_id}{ext}"
+                    target["hidden_prompt"] = f"{target['title']}: {target['brief']}"
+                    return target
+                except Exception as e:
+                    print(f"[ChallengeManager] Error loading local image {local_img_path}: {e}")
 
         # Fallback to image generator if local file is missing
         from image_generator import image_generator
@@ -523,7 +533,34 @@ class ChallengeManager:
         target["hidden_prompt"] = target_prompt
         return target
 
-    def add_challenge(self, category, title, brief, visual_goals="", inspiration_keywords=None, evaluation_focus="", is_active=True, created_by="admin"):
+    def save_challenge_image(self, challenge_id, image_data):
+        if not image_data:
+            return None
+        os.makedirs(os.path.join("static", "images", "challenges"), exist_ok=True)
+        img_path = os.path.join("static", "images", "challenges", f"{challenge_id}.jpg")
+        try:
+            if isinstance(image_data, str) and "base64," in image_data:
+                b64_content = image_data.split("base64,")[1]
+                raw_bytes = base64.b64decode(b64_content)
+            elif isinstance(image_data, bytes):
+                raw_bytes = image_data
+            else:
+                return None
+
+            with open(img_path, "wb") as f:
+                f.write(raw_bytes)
+
+            for c in self.challenges:
+                if c.get("id") == challenge_id:
+                    c["static_url"] = f"/static/images/challenges/{challenge_id}.jpg"
+                    break
+            self._save()
+            return f"/static/images/challenges/{challenge_id}.jpg"
+        except Exception as e:
+            print(f"[ChallengeManager] Error saving image for {challenge_id}: {e}")
+            return None
+
+    def add_challenge(self, category, title, brief, visual_goals="", inspiration_keywords=None, evaluation_focus="", is_active=True, created_by="admin", image_data=None):
         challenge_id = f"custom-{uuid.uuid4().hex[:8]}"
         if isinstance(inspiration_keywords, str):
             inspiration_keywords = [k.strip() for k in inspiration_keywords.split(",") if k.strip()]
@@ -541,6 +578,10 @@ class ChallengeManager:
             "is_active": bool(is_active),
             "created_by": created_by
         }
+        if image_data:
+            self.save_challenge_image(challenge_id, image_data)
+            new_challenge["static_url"] = f"/static/images/challenges/{challenge_id}.jpg"
+
         self.challenges.append(new_challenge)
         self._init_deck()
         self._save()

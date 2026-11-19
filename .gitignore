@@ -55,3 +55,6 @@ desktop.ini
 *.log
 logs/
 
+# Local data cache
+data/
+

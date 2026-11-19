@@ -1,6 +1,7 @@
 import unittest
 import base64
 import io
+import os
 from unittest.mock import patch, MagicMock
 from PIL import Image
 from app import app, ADMIN_CODE
@@ -311,6 +312,44 @@ class TestReversePromptBattle(unittest.TestCase):
         )
         self.assertEqual(reset_resp.status_code, 200)
         self.assertTrue(reset_resp.get_json()['success'])
+
+    def test_challenge_custom_image_upload(self):
+        # 1. Add challenge with base64 image
+        dummy_b64 = "data:image/jpeg;base64," + base64.b64encode(b"fake_jpeg_content").decode("utf-8")
+        add_resp = self.client.post(
+            '/api/challenges/add',
+            headers={'X-Admin-Code': ADMIN_CODE},
+            json={
+                'category': 'Cinematic Movie Scenes',
+                'title': 'Test Upload Megacity',
+                'brief': 'A test floating city challenge with uploaded image.',
+                'image_data': dummy_b64
+            }
+        )
+        self.assertEqual(add_resp.status_code, 200)
+        ch_data = add_resp.get_json()['challenge']
+        ch_id = ch_data['id']
+        self.assertIn('static_url', ch_data)
+
+        # 2. Upload image to existing challenge endpoint
+        new_dummy_b64 = "data:image/jpeg;base64," + base64.b64encode(b"updated_jpeg_content").decode("utf-8")
+        upload_resp = self.client.post(
+            f'/api/challenges/{ch_id}/image',
+            headers={'X-Admin-Code': ADMIN_CODE},
+            json={'image_data': new_dummy_b64}
+        )
+        self.assertEqual(upload_resp.status_code, 200)
+        self.assertTrue(upload_resp.get_json()['success'])
+        self.assertIn(ch_id, upload_resp.get_json()['static_url'])
+
+        # Clean up test file
+        test_file = os.path.join("static", "images", "challenges", f"{ch_id}.jpg")
+        if os.path.exists(test_file):
+            try:
+                os.remove(test_file)
+            except Exception:
+                pass
+        challenge_manager.remove_challenge(ch_id)
 
 
 if __name__ == '__main__':

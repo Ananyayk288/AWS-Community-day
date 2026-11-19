@@ -604,6 +604,7 @@ def add_challenge():
     inspiration_keywords = data.get("inspiration_keywords", "")
     evaluation_focus = data.get("evaluation_focus", "")
     is_active = data.get("is_active", True)
+    image_data = data.get("image_data")
 
     if not category or not title or not brief:
         return jsonify({"error": "Category, title, and brief are required"}), 400
@@ -619,11 +620,35 @@ def add_challenge():
         inspiration_keywords=inspiration_keywords,
         evaluation_focus=evaluation_focus,
         is_active=is_active,
-        created_by="admin"
+        created_by="admin",
+        image_data=image_data
     )
 
     socketio.emit("challenges_updated", {"action": "added", "challenge": new_item})
     return jsonify({"success": True, "challenge": new_item})
+
+@app.route("/api/challenges/<challenge_id>/image", methods=["POST"])
+def upload_challenge_image(challenge_id):
+    if not verify_admin(request):
+        return jsonify({"error": "Admin authorization required"}), 403
+
+    image_data = None
+    if "file" in request.files:
+        file = request.files["file"]
+        if file and file.filename:
+            image_data = file.read()
+    elif request.is_json:
+        image_data = (request.get_json() or {}).get("image_data")
+
+    if not image_data:
+        return jsonify({"error": "No image data or file provided"}), 400
+
+    static_url = challenge_manager.save_challenge_image(challenge_id, image_data)
+    if not static_url:
+        return jsonify({"error": "Failed to save image"}), 500
+
+    socketio.emit("challenges_updated", {"action": "image_updated", "challenge_id": challenge_id, "static_url": static_url})
+    return jsonify({"success": True, "static_url": static_url})
 
 @app.route("/api/challenges/<challenge_id>/toggle", methods=["POST"])
 def toggle_challenge(challenge_id):
