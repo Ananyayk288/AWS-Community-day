@@ -231,12 +231,7 @@
 
               <!-- LEFT CARD: Target Reference Scene -->
               <div class="pq-dash-card challenge-box pq-arena-equal-card" id="assigned-challenge-card">
-                <div class="challenge-top-meta">
-                  <div class="category-tag-pill" id="player-cat-badge">
-                    <span class="cat-dot"></span>
-                    <span id="player-cat-name">Category Loading...</span>
-                  </div>
-                </div>
+                <div class="challenge-top-meta"></div>
 
                 <h2 class="challenge-main-title" id="player-challenge-title">Target Reference Scene</h2>
 
@@ -483,9 +478,6 @@
               </div>
 
               <div class="leaderboard-actions">
-                <select id="leaderboard-cat-filter" class="awsui-select" aria-label="Filter Leaderboard by Category">
-                  <option value="">All 8 Categories</option>
-                </select>
                 <button type="button" class="pq-btn-outline-pill" id="refresh-leaderboard-btn">↻ Refresh</button>
                 <button type="button" class="pq-btn-orange-pill" id="back-to-game-btn">
                   <span>← Back to Arena</span>
@@ -504,7 +496,7 @@
                     <th>Rank</th>
                     <th>Player</th>
                     <th>Email</th>
-                    <th>Category &amp; Quest</th>
+                    <th>Challenge Quest</th>
                     <th>AI Score</th>
                     <th>Total Score</th>
                     <th>Tier Badge</th>
@@ -567,20 +559,6 @@
               </div>
             </div>
 
-            <div class="pq-card-heading-row" style="margin: 28px 0 14px;">
-              <span class="pq-slash">/</span>
-              <h3>The 8 Official Frontier Challenge Tracks</h3>
-            </div>
-            <div class="categories-showcase-grid">
-              <div class="pq-dash-card category-preview-card"><span class="cat-card-index">01</span><h4>Future of Education</h4><p>Biophilic hyper-campuses, holographic mentors, and quantum learning pods.</p></div>
-              <div class="pq-dash-card category-preview-card"><span class="cat-card-index">02</span><h4>Smart Cities &amp; Sustainable Living</h4><p>Zero-carbon solarpunk archipelagos, vertical forest spires, and clean transit.</p></div>
-              <div class="pq-dash-card category-preview-card"><span class="cat-card-index">03</span><h4>Artificial Intelligence &amp; Humanity</h4><p>Symbiotic human-AI creative ateliers and planetary climate guardians.</p></div>
-              <div class="pq-dash-card category-preview-card"><span class="cat-card-index">04</span><h4>Space Exploration &amp; Civilizations</h4><p>Martian canyon biosphere domes and Europa abyssal research outposts.</p></div>
-              <div class="pq-dash-card category-preview-card"><span class="cat-card-index">05</span><h4>Technology for Social Impact</h4><p>Atmospheric desert water harvesters and autonomous medical clinics.</p></div>
-              <div class="pq-dash-card category-preview-card"><span class="cat-card-index">06</span><h4>Future of Work</h4><p>Volumetric telepresence maker commons and bionic craft workshops.</p></div>
-              <div class="pq-dash-card category-preview-card"><span class="cat-card-index">07</span><h4>Cloud-Powered Innovation</h4><p>Serverless planetary mesh networks and real-time renewable digital twins.</p></div>
-              <div class="pq-dash-card category-preview-card"><span class="cat-card-index">08</span><h4>Robotics &amp; Automation</h4><p>Biomimetic coral restoration swarms and alpine rescue quadrupeds.</p></div>
-            </div>
           </div>
         </section>
 
@@ -666,7 +644,7 @@
       <div id="admin-dashboard-panel" class="modal-dashboard-body hidden">
 
         <div class="awsui-modal-tabs">
-          <button type="button" class="modal-tab-btn active" data-tab="tab-challenges">Challenge Catalog (8 Categories)</button>
+          <button type="button" class="modal-tab-btn active" data-tab="tab-challenges">Challenge Catalog</button>
           <button type="button" class="modal-tab-btn" data-tab="tab-competition">Competition Phase &amp; Reset</button>
         </div>
 
@@ -682,10 +660,6 @@
               <span class="stat-big-num" id="stat-active-challenges">16</span>
               <span class="stat-mini-label">Active Challenges</span>
             </div>
-            <div class="admin-stat-cell">
-              <span class="stat-big-num" id="stat-categories-count">8</span>
-              <span class="stat-mini-label">Official Categories</span>
-            </div>
           </div>
 
           <!-- Add Challenge Form -->
@@ -696,11 +670,7 @@
             </div>
             <div class="accordion-content hidden" id="add-challenge-form-body">
               <div class="form-grid-two">
-                <div class="form-cell">
-                  <label class="awsui-label">Category *</label>
-                  <select id="new-challenge-category" class="awsui-select"></select>
-                </div>
-                <div class="form-cell">
+                <div class="form-cell full-width">
                   <label class="awsui-label">Challenge Title *</label>
                   <input type="text" id="new-challenge-title" class="awsui-text-input" placeholder="e.g. Floating Clean Energy Megacity">
                 </div>
@@ -740,9 +710,6 @@
             <div class="catalog-top-toolbar">
               <h5>Challenge Catalog &amp; Activations</h5>
               <div class="catalog-actions-group">
-                <select id="admin-cat-filter" class="awsui-select-sm">
-                  <option value="">All Categories</option>
-                </select>
                 <button type="button" class="pq-btn-outline-pill btn-sm" id="reset-challenges-btn">Reset to Defaults</button>
               </div>
             </div>
@@ -752,7 +719,6 @@
                   <tr>
                     <th>Image</th>
                     <th>Status</th>
-                    <th>Category</th>
                     <th>Title &amp; Brief</th>
                     <th>Actions</th>
                   </tr>

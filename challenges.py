@@ -11,10 +11,7 @@ import uuid
 import base64
 from PIL import Image
 
-OFFICIAL_CATEGORIES = [
-    "Cinematic Movie Scenes",
-    "Dynamic Objects in Action"
-]
+OFFICIAL_CATEGORIES = []
 
 DEFAULT_CHALLENGES = [
     # Category 1: Cinematic Movie Scenes
@@ -560,7 +557,7 @@ class ChallengeManager:
             print(f"[ChallengeManager] Error saving image for {challenge_id}: {e}")
             return None
 
-    def add_challenge(self, category, title, brief, visual_goals="", inspiration_keywords=None, evaluation_focus="", is_active=True, created_by="admin", image_data=None):
+    def add_challenge(self, title, brief, category="General", visual_goals="", inspiration_keywords=None, evaluation_focus="", is_active=True, created_by="admin", image_data=None):
         challenge_id = f"custom-{uuid.uuid4().hex[:8]}"
         if isinstance(inspiration_keywords, str):
             inspiration_keywords = [k.strip() for k in inspiration_keywords.split(",") if k.strip()]
@@ -569,7 +566,7 @@ class ChallengeManager:
 
         new_challenge = {
             "id": challenge_id,
-            "category": category,
+            "category": category or "General",
             "title": title.strip(),
             "brief": brief.strip(),
             "visual_goals": visual_goals.strip(),
@@ -617,18 +614,11 @@ class ChallengeManager:
     def get_stats(self):
         total = len(self.challenges)
         active = sum(1 for c in self.challenges if c.get("is_active", True))
-        by_category = {}
-        for cat in OFFICIAL_CATEGORIES:
-            cat_challenges = [c for c in self.challenges if c.get("category") == cat]
-            by_category[cat] = {
-                "total": len(cat_challenges),
-                "active": sum(1 for c in cat_challenges if c.get("is_active", True))
-            }
         return {
             "total": total,
             "active": active,
             "inactive": total - active,
-            "categories": by_category
+            "categories": {}
         }
 
 challenge_manager = ChallengeManager()

@@ -597,7 +597,7 @@ def add_challenge():
         return jsonify({"error": "Admin authorization required"}), 403
 
     data = request.get_json() or {}
-    category = data.get("category")
+    category = data.get("category", "") or "General"
     title = data.get("title")
     brief = data.get("brief")
     visual_goals = data.get("visual_goals", "")
@@ -606,16 +606,13 @@ def add_challenge():
     is_active = data.get("is_active", True)
     image_data = data.get("image_data")
 
-    if not category or not title or not brief:
-        return jsonify({"error": "Category, title, and brief are required"}), 400
-
-    if category not in OFFICIAL_CATEGORIES:
-        return jsonify({"error": f"Category must be one of: {', '.join(OFFICIAL_CATEGORIES)}"}), 400
+    if not title or not brief:
+        return jsonify({"error": "Title and brief are required"}), 400
 
     new_item = challenge_manager.add_challenge(
-        category=category,
         title=title,
         brief=brief,
+        category=category,
         visual_goals=visual_goals,
         inspiration_keywords=inspiration_keywords,
         evaluation_focus=evaluation_focus,

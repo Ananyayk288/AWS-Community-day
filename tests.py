@@ -57,7 +57,7 @@ class TestReversePromptBattle(unittest.TestCase):
         for i in range(10):
             t = challenge_manager.get_unique_target_challenge(participant_id=f"user-unique-{i}")
             self.assertIsNotNone(t.get("image_data"))
-            self.assertIn(t["category"], OFFICIAL_CATEGORIES)
+            self.assertTrue(t.get("title"))
             self.assertNotIn(t["id"], seen_ids, f"Repetition detected for {t['id']}!")
             seen_ids.add(t["id"])
 

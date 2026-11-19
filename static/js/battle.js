@@ -1805,19 +1805,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
   async function loadLeaderboard() {
     try {
-      const url =
-        leaderboardFilter && leaderboardFilter.value
-          ? `/api/leaderboard?category=${encodeURIComponent(leaderboardFilter.value)}`
-          : "/api/leaderboard";
-      const resp = await fetch(url);
+      const resp = await fetch("/api/leaderboard");
       const data = await resp.json();
       const list = data.leaderboard || [];
 
-      if (!leaderboardFilter || !leaderboardFilter.value) {
-        renderHomeTopPlayersWidget(list);
-        const subCountEl = document.getElementById("nav-submissions-count");
-        if (subCountEl) subCountEl.textContent = list.length;
-      }
+      renderHomeTopPlayersWidget(list);
+      const subCountEl = document.getElementById("nav-submissions-count");
+      if (subCountEl) subCountEl.textContent = list.length;
 
       if (!leaderboardBody) return;
 
@@ -1828,7 +1822,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         leaderboardBody.innerHTML = `
           <tr>
-            <td colspan="8" class="table-empty">No entries for this category yet. Submit creations from the Prompt Arena!</td>
+            <td colspan="8" class="table-empty">No submissions locked in yet. Enter the Arena to claim Rank #1!</td>
           </tr>
         `;
         return;
@@ -1851,7 +1845,7 @@ document.addEventListener("DOMContentLoaded", () => {
                   <span class="podium-builder-name">${entry.player_name}</span>
                   <span class="podium-score-val">${entry.composite_score} pts</span>
                 </div>
-                <div class="podium-cat-text">${entry.category} &bull; ${entry.challenge_title}</div>
+                <div class="podium-cat-text">${entry.challenge_title}</div>
                 <p class="podium-prompt-snip">"${entry.prompt}"</p>
               </div>
             `;
@@ -1879,8 +1873,7 @@ document.addEventListener("DOMContentLoaded", () => {
           <td><strong>${entry.player_name}</strong></td>
           <td><span style="font-size:12px; color:var(--aws-blue); font-family:var(--font-mono);">${entry.player_email || "—"}</span></td>
           <td>
-            <div style="font-size:11px; font-weight:700; color:var(--aws-orange);">${entry.category}</div>
-            <div style="font-size:12.5px;">${entry.challenge_title}</div>
+            <div style="font-size:13px; font-weight:700;">${entry.challenge_title}</div>
           </td>
           <td class="table-score">${entry.ai_score}</td>
           <td style="font-weight:800; font-size:14px; font-family:var(--font-mono);">${entry.composite_score}</td>
@@ -2161,18 +2154,14 @@ document.addEventListener("DOMContentLoaded", () => {
   async function loadAdminChallenges() {
     if (!adminChallengesTable) return;
     try {
-      const cat = adminCatFilter ? adminCatFilter.value : "";
-      const url = cat ? `/api/challenges?category=${encodeURIComponent(cat)}` : "/api/challenges";
-      const resp = await fetch(url);
+      const resp = await fetch("/api/challenges");
       const data = await resp.json();
 
       if (data.stats) {
         const t = document.getElementById("stat-total-challenges");
         const a = document.getElementById("stat-active-challenges");
-        const c = document.getElementById("stat-categories-count");
         if (t) t.textContent = data.stats.total;
         if (a) a.textContent = data.stats.active;
-        if (c) c.textContent = Object.keys(data.stats.categories || {}).length;
       }
 
       adminChallengesTable.innerHTML = "";
@@ -2186,7 +2175,6 @@ document.addEventListener("DOMContentLoaded", () => {
         tr.innerHTML = `
           <td>${imgCell}</td>
           <td><span class="status-badge ${isActive ? "active" : "inactive"}">${isActive ? "ACTIVE" : "INACTIVE"}</span></td>
-          <td><strong style="color:var(--aws-orange);">${ch.category}</strong></td>
           <td>
             <div style="font-weight:700;">${ch.title}</div>
             <div style="font-size:11.5px; color:var(--pq-text-secondary);">${ch.brief.slice(0, 90)}...</div>
@@ -2308,15 +2296,14 @@ document.addEventListener("DOMContentLoaded", () => {
   const saveChallengeBtn = document.getElementById("save-new-challenge-btn");
   if (saveChallengeBtn) {
     saveChallengeBtn.addEventListener("click", async () => {
-      const category = document.getElementById("new-challenge-category")?.value;
       const title = document.getElementById("new-challenge-title")?.value.trim();
       const brief = document.getElementById("new-challenge-brief")?.value.trim();
       const visual = document.getElementById("new-challenge-visual")?.value.trim();
       const keywords = document.getElementById("new-challenge-keywords")?.value.trim();
       const focus = document.getElementById("new-challenge-focus")?.value.trim();
 
-      if (!category || !title || !brief) {
-        showToast("Category, title, and brief are required.", "error");
+      if (!title || !brief) {
+        showToast("Challenge Title and Brief are required.", "error");
         return;
       }
 
@@ -2328,7 +2315,6 @@ document.addEventListener("DOMContentLoaded", () => {
             "X-Admin-Code": state.adminToken
           },
           body: JSON.stringify({
-            category,
             title,
             brief,
             visual_goals: visual,
@@ -2407,12 +2393,11 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Populate category dropdowns & initial stats
-  async function initCategorySelects() {
+  // Fetch initial challenge stats
+  async function initChallengeStats() {
     try {
       const resp = await fetch("/api/challenges");
       const data = await resp.json();
-      const cats = data.categories || [];
 
       if (data.stats) {
         const homePlayersEl = document.getElementById("home-stat-players");
@@ -2420,33 +2405,13 @@ document.addEventListener("DOMContentLoaded", () => {
           homePlayersEl.textContent = `${data.stats.active || 16}+`;
         }
       }
-
-      const selects = [
-        document.getElementById("leaderboard-cat-filter"),
-        document.getElementById("admin-cat-filter"),
-        document.getElementById("new-challenge-category")
-      ];
-
-      selects.forEach(sel => {
-        if (!sel) return;
-        const currentVal = sel.value;
-        const hasAll = sel.id !== "new-challenge-category";
-        sel.innerHTML = hasAll ? '<option value="">All 8 Categories</option>' : "";
-        cats.forEach(c => {
-          const opt = document.createElement("option");
-          opt.value = c;
-          opt.textContent = c;
-          sel.appendChild(opt);
-        });
-        if (currentVal) sel.value = currentVal;
-      });
     } catch (e) {
-      console.error("Init categories error:", e);
+      console.error("Init stats error:", e);
     }
   }
 
   // Initialize
-  initCategorySelects();
+  initChallengeStats();
   checkSavedIdentity();
   updateCharCount();
   refreshCompetitionState();
