@@ -262,6 +262,16 @@ document.addEventListener("DOMContentLoaded", () => {
         btn.classList.add("pq-btn-outline-pill");
       }
     });
+    const adminLiveBadge = document.getElementById("admin-live-phase-badge");
+    if (adminLiveBadge) {
+      const phaseBadgeMap = {
+        lobby: "🟢 LOBBY MODE",
+        battle: "⚔️ BATTLE ROUND (LIVE)",
+        showcase: "🌟 SHOWCASE & VOTING",
+        leaderboard: "🏆 FINAL STANDINGS"
+      };
+      adminLiveBadge.textContent = phaseBadgeMap[phase] || phase.toUpperCase();
+    }
   }
 
   let lastHandledPhase = null;
@@ -341,6 +351,22 @@ document.addEventListener("DOMContentLoaded", () => {
       liveStatusPill.className = `pq-live-event-pill pill-phase-${currentPhase}`;
     }
 
+    // Update Admin Phase Control Strip (Live Status & Player Count)
+    const adminLiveBadge = document.getElementById("admin-live-phase-badge");
+    const adminPlayersCount = document.getElementById("admin-live-players-count");
+    if (adminLiveBadge) {
+      const phaseBadgeMap = {
+        lobby: "🟢 LOBBY MODE",
+        battle: "⚔️ BATTLE ROUND (LIVE)",
+        showcase: "🌟 SHOWCASE & VOTING",
+        leaderboard: "🏆 FINAL STANDINGS"
+      };
+      adminLiveBadge.textContent = phaseBadgeMap[currentPhase] || currentPhase.toUpperCase();
+    }
+    if (adminPlayersCount && payload.participant_count !== undefined) {
+      adminPlayersCount.textContent = payload.participant_count;
+    }
+
     // 2. Identifier Screen Live Phase Banner & CTA Button Text
     const phaseBanner = document.getElementById("live-phase-banner");
     const phaseText = document.getElementById("live-phase-text");
@@ -393,10 +419,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (currentPhase === "battle") {
         // --- 1. START BATTLE ROUND: Launch all players into Arena ---
-        await ensureParticipantActive();
-        unlockWorkspaceForNewSession();
-        showScreen("game");
-        startChallengeTimer(payload.time_remaining || state.timerDuration || 180);
+        if (!state.isAdmin) {
+          await ensureParticipantActive();
+          unlockWorkspaceForNewSession();
+          showScreen("game");
+          startChallengeTimer(payload.time_remaining || state.timerDuration || 180);
+        }
         playAudioTone("success");
         showToast(`⚔️ Round ${payload.round_number || 1} Live! 180 seconds on the clock!`, "success");
 
@@ -406,7 +434,9 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!state.hasGenerated && state.participant) {
           lockWorkspaceAfterFinalize("⏰ Round Ended by Host", "ROUND OVER", "00:00");
         }
-        showScreen("leaderboard");
+        if (!state.isAdmin) {
+          showScreen("leaderboard");
+        }
         loadLeaderboard();
         playAudioTone("success");
         showToast("🌟 Showcase & Voting is now LIVE! Cast your applause votes with 👏!", "info");
@@ -414,7 +444,9 @@ document.addEventListener("DOMContentLoaded", () => {
       } else if (currentPhase === "leaderboard") {
         // --- 3. FINAL STANDINGS: Reveal official final rankings ---
         stopChallengeTimer();
-        showScreen("leaderboard");
+        if (!state.isAdmin) {
+          showScreen("leaderboard");
+        }
         loadLeaderboard();
         playAudioTone("success");
         showToast("🏆 Final Standings Announced! Check out the Hall of Future Builders!", "success");
@@ -422,7 +454,9 @@ document.addEventListener("DOMContentLoaded", () => {
       } else if (currentPhase === "lobby") {
         // --- 4. LOBBY MODE: Return everyone to Lobby ---
         stopChallengeTimer();
-        showScreen("identifier");
+        if (!state.isAdmin) {
+          showScreen("identifier");
+        }
         if (!isFirstRun) {
           showToast("🟢 Competition returned to Lobby Mode.", "info");
         }
@@ -841,23 +875,10 @@ document.addEventListener("DOMContentLoaded", () => {
   // 2. TARGET REFERENCE SCENE GENERATOR & CHALLENGE RENDERING
   // ---------------------------------------------------------------------------
   function buildChallengeReferenceDataURI(ch) {
-    const cat = (ch && ch.category) || "Cloud-Powered Innovation";
-    const title = (ch && ch.title) || "Future Vision";
+    const title = (ch && ch.title) || "Target Reference Scene";
     const safeTitle = title.replace(/[<>&"']/g, "");
-    const safeCat = cat.replace(/[<>&"']/g, "").toUpperCase();
 
-    const palettes = {
-      "Future of Education": { sky1: "#08080B", sky2: "#211832", accent: "#B69AFF", sec: "#D8C8FF" },
-      "Smart Cities and Sustainable Living": { sky1: "#08080B", sky2: "#211832", accent: "#B69AFF", sec: "#C4B5FD" },
-      "Artificial Intelligence and Humanity": { sky1: "#08080B", sky2: "#211832", accent: "#B69AFF", sec: "#D8C8FF" },
-      "Space Exploration and Future Civilizations": { sky1: "#08080B", sky2: "#211832", accent: "#B69AFF", sec: "#DDD6FE" },
-      "Technology for Social Impact": { sky1: "#08080B", sky2: "#211832", accent: "#B69AFF", sec: "#D8C8FF" },
-      "Future of Work": { sky1: "#08080B", sky2: "#211832", accent: "#B69AFF", sec: "#C4B5FD" },
-      "Cloud-Powered Innovation": { sky1: "#08080B", sky2: "#211832", accent: "#B69AFF", sec: "#D8C8FF" },
-      "Robotics and Automation": { sky1: "#08080B", sky2: "#211832", accent: "#B69AFF", sec: "#C4B5FD" }
-    };
-
-    const pal = palettes[cat] || palettes["Cloud-Powered Innovation"];
+    const pal = { sky1: "#08080B", sky2: "#211832", accent: "#B69AFF", sec: "#D8C8FF" };
 
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" width="800" height="450">
       <defs>
@@ -886,7 +907,7 @@ document.addEventListener("DOMContentLoaded", () => {
       <path d="M155 210 Q170 198 185 210" fill="none" stroke="${pal.accent}" stroke-width="2.5"/>
       <path d="M270 165 Q410 105 550 185" fill="none" stroke="${pal.sec}" stroke-dasharray="6 4" stroke-width="1.8"/>
       <rect x="24" y="22" width="350" height="54" rx="8" fill="#211832" fill-opacity="0.94" stroke="${pal.accent}" stroke-width="1.2"/>
-      <text x="40" y="43" fill="${pal.accent}" font-family="monospace" font-size="11" font-weight="bold">TARGET SCENE // ${safeCat}</text>
+      <text x="40" y="43" fill="${pal.accent}" font-family="monospace" font-size="11" font-weight="bold">TARGET REFERENCE SCENE</text>
       <text x="40" y="62" fill="#FFFFFF" font-family="sans-serif" font-size="13.5" font-weight="bold">${safeTitle.slice(0, 38)}</text>
     </svg>`;
 
@@ -937,7 +958,7 @@ document.addEventListener("DOMContentLoaded", () => {
         playAudioTone("click");
         openImageModal(
           state.currentReferenceUri,
-          `Target Reference: ${state.currentChallenge.title} (${state.currentChallenge.category || ""})`
+          `Target Reference: ${state.currentChallenge.title}`
         );
       }
     });
@@ -1183,7 +1204,7 @@ document.addEventListener("DOMContentLoaded", () => {
         playAudioTone("click");
         openImageModal(
           state.currentReferenceUri,
-          `Target Reference: ${state.currentChallenge.title} (${state.currentChallenge.category || ""})`
+          `Target Reference: ${state.currentChallenge.title}`
         );
       }
     });
@@ -1589,7 +1610,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const chName = document.getElementById("eval-challenge-name");
     if (chName && state.currentChallenge) {
-      chName.textContent = `Visual Comparison: "${state.currentChallenge.title}" (${state.currentChallenge.category})`;
+      chName.textContent = `Visual Comparison: "${state.currentChallenge.title}"`;
     }
 
     const totalEl = document.getElementById("eval-total-score");

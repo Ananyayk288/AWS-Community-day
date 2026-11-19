@@ -632,7 +632,7 @@
       <div id="admin-auth-panel" class="modal-auth-body">
         <div class="auth-lock-badge">🔒</div>
         <h4>Administrator Access</h4>
-        <p>Enter the competition administrator code (<code>builder2026</code>) to manage challenges, categories, and live event rounds.</p>
+        <p>Enter the competition administrator code (<code>builder2026</code>) to manage challenges and live event rounds.</p>
         <div class="modal-auth-row">
           <input type="password" id="admin-code-input" class="awsui-text-input" placeholder="Admin Access Code..." autocomplete="off">
           <button type="button" class="pq-btn-orange-pill" id="admin-login-btn">Authenticate</button>
@@ -736,11 +736,28 @@
             <div class="admin-panel-card">
               <h4>Competition Phase Control</h4>
               <p>Switch active competition phase and round timer for all connected players:</p>
+              
+              <div class="admin-phase-status-strip" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; padding:8px 12px; background:rgba(182,154,255,0.08); border:1px solid rgba(182,154,255,0.25); border-radius:8px;">
+                <div>
+                  <span style="font-size:12px; color:var(--pq-text-secondary); text-transform:uppercase; letter-spacing:0.5px;">Live Status:</span>
+                  <strong id="admin-live-phase-badge" style="color:var(--sbg-purple-light); font-size:13px; margin-left:6px;">🟢 LOBBY MODE</strong>
+                </div>
+                <div>
+                  <span style="font-size:12px; color:var(--pq-text-secondary);">Active Players: </span>
+                  <strong id="admin-live-players-count" style="color:var(--aws-orange); font-size:13px;">0</strong>
+                </div>
+              </div>
+
               <div class="phase-btn-group" id="admin-phase-btn-group">
                 <button type="button" class="pq-btn-outline-pill btn-phase-ctrl" data-phase="lobby">Lobby Mode</button>
                 <button type="button" class="pq-btn-outline-pill btn-phase-ctrl" data-phase="battle">Start Battle Round</button>
                 <button type="button" class="pq-btn-outline-pill btn-phase-ctrl" data-phase="showcase">Showcase &amp; Voting</button>
                 <button type="button" class="pq-btn-outline-pill btn-phase-ctrl" data-phase="leaderboard">Final Standings</button>
+              </div>
+
+              <div style="margin-top:12px; padding-top:10px; border-top:1px dashed rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-size:12px; color:var(--pq-text-secondary);">Testing multi-player?</span>
+                <a href="/" target="_blank" class="pq-btn-outline-pill btn-sm" style="text-decoration:none; font-size:11.5px; padding:4px 10px;">↗ Open Player View in New Tab</a>
               </div>
             </div>
 
@@ -781,6 +798,6 @@
   </div>
 
   <!-- Client Script Engine -->
-  <script src="/static/js/battle.js?v=pq-ux-v8"></script>
+  <script src="/static/js/battle.js?v=pq-ux-v9"></script>
 </body>
 </html>
